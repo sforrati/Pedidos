@@ -1,0 +1,2851 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Pedidos - Postos Central</title>
+    <!-- Adicionando jsPDF e html2canvas via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f7f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .admin-button-container {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto 20px auto;
+            text-align: right;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin: 0 auto;
+        }
+        h1, h2, h3 {
+            color: #0056b3;
+            text-align: center;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+        .initial-choice, .unit-selection-container {
+            text-align: center;
+            padding: 40px 0;
+        }
+        .initial-choice button, .unit-selection-container button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-size: 1.5em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 15px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .initial-choice button:hover, .unit-selection-container button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        .form-section {
+            display: none; /* Hidden by default */
+        }
+        .item-adder {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 25px;
+        }
+        .item-adder h3, .item-adder h4 {
+            margin-top: 0;
+            color: #343a40;
+            border-bottom: none;
+            text-align: left;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+            margin-bottom: 10px;
+        }
+        .input-group input[type="text"] {
+            flex-grow: 1;
+        }
+        input[type="text"], input[type="number"], input[type="password"], select {
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1em;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        select {
+            font-size: 1.2em;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        input[type="number"] {
+            width: 100px;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 1em;
+            cursor: pointer;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            transition: background-color 0.2s;
+        }
+        .btn-add {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-add:hover {
+            background-color: #218838;
+        }
+        .btn-action {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .btn-action:hover {
+            background-color: #138496;
+        }
+        .btn-back {
+            background-color: #6c757d;
+            color: white;
+        }
+        .btn-back:hover {
+            background-color: #5a6268;
+        }
+        .btn-continue {
+             background-color: #007bff;
+             color: white;
+             padding: 15px 30px;
+             font-size: 1.2em;
+        }
+        .btn-continue:hover {
+             background-color: #0056b3;
+        }
+        .btn-remove {
+            background-color: #dc3545;
+            color: white;
+            font-size: 0.8em;
+            padding: 5px 8px;
+        }
+        .btn-remove:hover {
+            background-color: #c82333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #e9ecef;
+            font-weight: 600;
+        }
+        .actions-footer {
+            margin-top: 30px;
+            text-align: right;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .report-unit-header {
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #343a40;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+        #adminSection { /* Container da seção de admin */
+            border: 2px solid #0056b3;
+            padding: 20px;
+            margin-bottom: 30px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        #adminLoginDiv .input-group { /* Para centralizar o input de senha */
+            max-width: 350px;
+            margin: 20px auto;
+        }
+        #adminLoginDiv .input-group button {
+            flex-shrink: 0; /* Para o botão não encolher */
+        }
+
+        #adminDashboard button {
+            margin: 5px;
+        }
+        #adminDashboard .input-group button {
+            margin: 0;
+        }
+        .admin-tools-container {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+        }
+
+
+        /* Print styles - serão usados pelo html2canvas para renderizar o PDF */
+        .pdf-export-mode .no-print {
+            display: none !important;
+        }
+        .pdf-export-mode .container {
+            box-shadow: none !important;
+            border: none !important;
+            max-width: 100% !important;
+            width: auto !important;    
+            margin: 0 !important;     
+            padding: 0 !important;    
+        }
+         .pdf-export-mode body {
+            background-color: #fff !important;
+            font-size: 18pt !important; /* AUMENTADO SIGNIFICATIVAMENTE */
+            padding: 0 !important; 
+            margin: 0 !important;  
+            color: #000 !important;
+        }
+        .pdf-export-mode table {
+            border-collapse: collapse !important; 
+        }
+        .pdf-export-mode table, 
+        .pdf-export-mode th, 
+        .pdf-export-mode td {
+            border: 1px solid #333 !important; 
+            padding: 5px !important; /* Ajustado para melhor acomodação com fonte maior */
+            font-size: 15pt !important; /* AUMENTADO SIGNIFICATIVAMENTE */
+            color: #000 !important;
+            vertical-align: top; /* Alinhar ao topo para melhor leitura com fontes grandes */
+        }
+        .pdf-export-mode th {
+            background-color: #e0e0e0 !important;
+            font-weight: bold !important;
+        }
+        .pdf-export-mode h1 { 
+            display: none !important;
+        }
+        .pdf-export-mode h2 { /* Título do Pedido: "Pedido de Conveniência" */
+            font-size: 22pt !important; /* AUMENTADO SIGNIFICATIVAMENTE */
+            border-bottom: 2px solid #555 !important; /* Linha mais grossa */
+            padding-bottom: 8px !important;
+            margin-bottom: 15px !important;
+            color: #000 !important;
+            text-align: center !important;
+            font-weight: bold !important;
+            display: block !important; /* Garantir que seja visível */
+        }
+        .pdf-export-mode h3 { /* "Itens do Pedido" */
+            font-size: 18pt !important; /* AUMENTADO SIGNIFICATIVAMENTE */
+            margin-top: 20px !important;
+            margin-bottom: 10px !important;
+            text-align: left !important;
+            border-bottom: none !important;
+            color: #000 !important;
+            font-weight: bold !important;
+            display: block !important; /* Garantir que seja visível */
+        }
+        .pdf-export-mode .report-unit-header { /* "Relatório da Unidade X" */
+            background-color: transparent !important;
+            padding: 0 0 7px 0 !important; 
+            font-size: 16pt !important; /* AUMENTADO SIGNIFICATIVAMENTE */
+            margin-bottom: 12px !important; 
+            text-align: center !important;
+            color: #000 !important;
+            font-weight: bold !important;
+            border-radius: 0 !important;
+            border-bottom: 1.5px solid #888 !important; /* Linha mais visível */
+            display: block !important; /* Garantir que seja visível */
+        }
+        .pdf-export-mode #printableConveniencia,
+        .pdf-export-mode #printableLubrificantes {
+            padding: 15mm 10mm; 
+            background-color: #fff !important; 
+            width: 100%; 
+            box-sizing: border-box;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Botão de Administração -->
+    <div class="admin-button-container no-print">
+        <button id="btnAdmin" onclick="showAdminLoginPrompt()">Gerenciar Produtos</button>
+    </div>
+
+    <!-- Seção de Administração (inicialmente oculta) -->
+    <div id="adminSection" class="form-section container" style="display:none;">
+        <h2>Administração de Produtos</h2>
+        
+        <div id="adminLoginDiv">
+            <p style="text-align:center;">Por favor, insira a senha de administrador:</p>
+            <div class="input-group">
+                <input type="password" id="adminPasswordInput" placeholder="Senha">
+                <button onclick="checkAdminPassword()">Entrar</button>
+            </div>
+        </div>
+
+        <div id="adminDashboard" style="display:none;">
+            <p style="text-align:center;">Selecione a lista de produtos para gerenciar:</p>
+            <div style="text-align:center; margin-bottom: 20px;">
+                <button onclick="manageList('Conveniência', 'produtosConveniencia')">Produtos de Conveniência</button>
+                <button onclick="manageList('Lubrificantes', 'produtosLubrificantes')">Lubrificantes</button>
+                <button onclick="manageList('Consumo', 'itensConsumo')">Itens de Consumo</button>
+                <button onclick="showAdminTools()" title="Configurações e Backup">Configurações ⚙️</button>
+            </div>
+
+            <div id="adminToolsDiv" class="admin-tools-container" style="display:none;">
+                <h4>Backup e Restauração</h4>
+                <button onclick="saveLocalStorageToFile()">Salvar Backup Local</button>
+                <button onclick="triggerImportLocalStorage()">Importar Backup Local</button>
+                <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importLocalStorageFromFile(event)">
+            </div>
+            
+            <button class="btn-back" onclick="logoutAdmin()" style="display:block; margin: 20px auto 0;">Sair da Administração</button>
+
+            <div id="listManagementSection" style="display:none; margin-top: 20px;">
+                <h3 id="listManagementTitle"></h3>
+                <div class="item-adder">
+                    <h4>Adicionar / Editar Item</h4>
+                    <input type="hidden" id="editItemOriginalCodigo">
+                    <div class="input-group">
+                        <input type="text" id="itemCodigo" placeholder="Código do Item">
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="itemNome" placeholder="Nome do Item" style="flex-grow:3;">
+                    </div>
+                    <button id="btnSaveItem" class="btn-add" onclick="saveItem()">Adicionar Item</button>
+                    <button id="btnClearForm" class="btn-back" onclick="clearItemForm()">Limpar / Cancelar Edição</button>
+                </div>
+
+                <h4>Itens Cadastrados</h4>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table id="itemsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 20%;">Código</th>
+                                <th>Nome</th>
+                                <th style="width: 25%;" class="no-print">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="container">
+        <h1 class="no-print">Postos Central - Gerenciador de Pedidos</h1>
+
+        <!-- ETAPA 1: ESCOLHA DO SETOR -->
+        <div id="inicio" class="initial-choice">
+            <button onclick="selectSector('Conveniencia')">Conveniência</button>
+            <button onclick="selectSector('Lubrificantes')">Lubrificantes</button>
+        </div>
+
+        <!-- ETAPA 2: ESCOLHA DA UNIDADE (MOVIDO PARA APARECER ABAIXO) -->
+        <div id="unitSelection" class="form-section unit-selection-container">
+            <h2>Selecione a Unidade</h2>
+            <select id="unitSelect">
+                <option value="" disabled selected>-- Escolha uma Unidade --</option>
+                <option value="Unidade 01: POSTO NOVO">Unidade 01: POSTO NOVO</option>
+                <option value="Unidade 02: MATRIZ">Unidade 02: MATRIZ</option>
+                <option value="Unidade 03: STA CRUZ">Unidade 03: STA CRUZ</option>
+                <option value="Unidade 04: LATINA">Unidade 04: LATINA</option>
+                <option value="Unidade 05: CANDELARIA">Unidade 05: CANDELARIA</option>
+                <option value="Unidade 06: FERRAZ">Unidade 06: FERRAZ</option>
+                <option value="Unidade 07: ALBARDÃO">Unidade 07: ALBARDÃO</option>
+                <option value="Unidade 08: PIQUIRI">Unidade 08: PIQUIRI</option>
+                <option value="Unidade 09: SHELL DF">Unidade 09: SHELL DF</option>
+                <option value="Unidade 10: BR DF">Unidade 10: BR DF</option>
+                <option value="Unidade 11: SINIMBU">Unidade 11: SINIMBU</option>
+                <option value="Unidade 12: AGUDO">Unidade 12: AGUDO</option>
+                <option value="Unidade 13: PARAISO">Unidade 13: PARAISO</option>
+                <option value="Unidade 14: VENANCIO AIRES">Unidade 14: VENANCIO AIRES</option>
+            </select>
+            <div>
+                <button class="btn-back" onclick="showMenu()">Voltar</button>
+                <button class="btn-continue" onclick="proceedToForm()">Continuar</button>
+            </div>
+        </div>
+
+        <!-- Formulário de Pedido de Conveniência -->
+        <div id="formConveniencia" class="form-section">
+            <div id="printableConveniencia"> <!-- Área que será impressa/PDF -->
+                <h2>Pedido de Conveniência</h2>
+                <div id="unitDisplayConveniencia" class="report-unit-header"></div>
+
+                <div class="item-adder no-print">
+                    <h3>Adicionar Produto da Loja</h3>
+                    <div class="input-group">
+                        <input type="text" id="buscaProdutoConveniencia" list="listaProdutosConveniencia" placeholder="Digite o código ou nome do produto">
+                        <datalist id="listaProdutosConveniencia"></datalist>
+                        <input type="number" id="qtdProdutoConveniencia" placeholder="Qtd" min="1">
+                        <button class="btn-add" onclick="adicionarItem('conveniencia', 'produto')">Adicionar</button>
+                    </div>
+                </div>
+
+                <div class="item-adder no-print">
+                    <h3>Adicionar Item de Consumo</h3>
+                    <div class="input-group">
+                        <input type="text" id="buscaConsumoConveniencia" list="listaItensConsumo" placeholder="Digite o código ou nome do item de consumo">
+                        <input type="number" id="qtdConsumoConveniencia" placeholder="Qtd" min="1">
+                        <button class="btn-add" onclick="adicionarItem('conveniencia', 'consumo')">Adicionar</button>
+                    </div>
+                </div>
+
+                <h3>Itens do Pedido</h3> <!-- Este h3 será visível no PDF -->
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Código</th>
+                            <th>Produto</th>
+                            <th style="width: 10%;">Qtd.</th>
+                            <th style="width: 15%;" class="no-print">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaPedidoConveniencia"></tbody>
+                </table>
+            </div>
+
+            <div class="actions-footer no-print">
+                <button class="btn-back" onclick="showMenu()">Voltar ao Início</button>
+                <div>
+                    <button class="btn-action" onclick="enviarEmail('conveniencia')">Concluir</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulário de Pedido de Lubrificantes -->
+        <div id="formLubrificantes" class="form-section">
+             <div id="printableLubrificantes"> <!-- Área que será impressa/PDF -->
+                <h2>Pedido de Lubrificantes</h2>
+                 <div id="unitDisplayLubrificantes" class="report-unit-header"></div>
+
+                <div class="item-adder no-print">
+                    <h3>Adicionar Lubrificante / Produto</h3>
+                    <div class="input-group">
+                        <input type="text" id="buscaProdutoLubrificantes" list="listaProdutosLubrificantes" placeholder="Digite o código ou nome do produto">
+                        <datalist id="listaProdutosLubrificantes"></datalist>
+                        <input type="number" id="qtdProdutoLubrificantes" placeholder="Qtd" min="1">
+                        <button class="btn-add" onclick="adicionarItem('lubrificantes', 'produto')">Adicionar</button>
+                    </div>
+                </div>
+
+                <div class="item-adder no-print">
+                    <h3>Adicionar Item de Consumo</h3>
+                    <div class="input-group">
+                        <input type="text" id="buscaConsumoLubrificantes" list="listaItensConsumo" placeholder="Digite o código ou nome do item de consumo">
+                        <input type="number" id="qtdConsumoLubrificantes" placeholder="Qtd" min="1">
+                        <button class="btn-add" onclick="adicionarItem('lubrificantes', 'consumo')">Adicionar</button>
+                    </div>
+                </div>
+
+                <h3>Itens do Pedido</h3> <!-- Este h3 será visível no PDF -->
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Código</th>
+                            <th>Produto</th>
+                            <th style="width: 10%;">Qtd.</th>
+                            <th style="width: 15%;" class="no-print">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaPedidoLubrificantes"></tbody>
+                </table>
+            </div>
+            <div class="actions-footer no-print">
+                <button class="btn-back" onclick="showMenu()">Voltar ao Início</button>
+                <div>
+                    <button class="btn-action" onclick="enviarEmail('lubrificantes')">Concluir</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Datalist compartilhada para itens de consumo -->
+        <datalist id="listaItensConsumo"></datalist>
+    </div>
+
+    <p style="text-align: center; margin-top: 25px; margin-bottom: 15px; font-size: 0.85em; color: #555;" class="no-print">
+        Software desenvolvido por Silvio Forrati
+    </p>
+
+<script>
+// ===================================================================================
+// FUNÇÕES DE LOCALSTORAGE
+// ===================================================================================
+function saveDataToLocalStorage(key, data) {
+    try {
+        localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+        console.error("Erro ao salvar dados no localStorage para a chave:", key, e);
+        alert("Ocorreu um erro ao salvar os dados. O localStorage pode estar cheio ou indisponível.");
+    }
+}
+
+function loadDataFromLocalStorage(key, defaultValue) {
+    const data = localStorage.getItem(key);
+    if (data === null || data === undefined) {
+        saveDataToLocalStorage(key, defaultValue); // Salva o valor padrão se não existir
+        return defaultValue;
+    }
+    try {
+        const parsedData = JSON.parse(data);
+        // Garantir que sempre retornamos um array, mesmo que o dado salvo seja inválido
+        return Array.isArray(parsedData) ? parsedData : defaultValue;
+    } catch (e) {
+        console.error("Erro ao carregar dados do localStorage para a chave:", key, e, ". Usando valor padrão.");
+        saveDataToLocalStorage(key, defaultValue); // Salva o valor padrão em caso de erro de parse
+        return defaultValue;
+    }
+}
+
+// ===================================================================================
+// BANCO DE DADOS DE PRODUTOS (Carregados do LocalStorage ou Padrão)
+// ===================================================================================
+let produtosConveniencia = loadDataFromLocalStorage('produtosConvenienciaData', [
+    { codigo: '3592', nome: 'CARIMBO PEDAGOGICO UN' },
+    { codigo: '5705', nome: 'ENERGETICO FUSION ORIGINAL 2L' },
+    { codigo: '5020', nome: 'HOTCARDS' },
+    { codigo: '4427', nome: 'HOTWHEELS' },
+    { codigo: '364', nome: 'SUPER BONDER 3G' },
+    { codigo: '5616', nome: 'AMENDOIM CONFEITADO DORI 100G' },
+    { codigo: '4411', nome: 'AMENDUPA AMENDOIM COLORIDO 60G' },
+    { codigo: '5859', nome: 'AMENDUPA DELIMAKS SORT. 200G' },
+    { codigo: '4404', nome: 'AMENDUPA DELIMAKS SORT. 60G' },
+    { codigo: '5331', nome: 'BEBIDA STARBUCKS 280 ML' },
+    { codigo: '928', nome: 'BEBIDAS FEST ALPINO 270ML' },
+    { codigo: '2786', nome: 'BEBIDAS FEST NESCAFE 280ML' },
+    { codigo: '1240', nome: 'BEBIDAS FEST NESCAU 270ML' },
+    { codigo: '754', nome: 'BEBIDAS FEST NESTON 280ML' },
+    { codigo: '5229', nome: 'DELEITINHO CHOC E AVEIA 200 ML' },
+    { codigo: '5230', nome: 'DELEITINHO MOR E AVEIA 200 ML' },
+    { codigo: '5658', nome: 'MAIS MU SABORES 250 ML' },
+    { codigo: '165', nome: 'NESCAU 180 ML' },
+    { codigo: '736', nome: 'NESCAU 350G' },
+    { codigo: '4707', nome: 'NESCAU 550G' },
+    { codigo: '171', nome: 'TODDYNHO 200ML' },
+    { codigo: '5921', nome: 'BALA APITO LOKO DIPLOKO' },
+    { codigo: '351', nome: 'BALA BUTTER TOFES' },
+    { codigo: '814', nome: 'BALA CAFE UN.' },
+    { codigo: '4788', nome: 'BALA CIDREIRA PIETROBON LATA 200G' },
+    { codigo: '4900', nome: 'BALA DE BANANA UN' },
+    { codigo: '5887', nome: 'BALA DE GELATINA GUMMY MANIA HAMBURGUER 15G' },
+    { codigo: '5886', nome: 'BALA DE GELATINA GUMMY MANIA PIZZA 15G' },
+    { codigo: '347', nome: 'BALA DE GOMA 30G' },
+    { codigo: '5572', nome: 'BALA DE MENTA' },
+    { codigo: '5750', nome: 'BALA DOCILE CANUDINHO AZEDINHO MORANGO 70G' },
+    { codigo: '5751', nome: 'BALA DOCILE CANUDINHO AZEDINHO TUTTI-FRUTTI 70G' },
+    { codigo: '4766', nome: 'BALA DOCILE CANUDINHO MORANGO 70G' },
+    { codigo: '4748', nome: 'BALA DOCILE CANUDINHO SUPER AZEDINHO 70G' },
+    { codigo: '5741', nome: 'BALA DOCILE CANUDINHO TUTTI FRUTTI CITRICO 70G' },
+    { codigo: '4747', nome: 'BALA DOCILE CANUDINHO UNI 70G' },
+    { codigo: '2870', nome: 'BALA DOCILE COBRINHAS 80G' },
+    { codigo: '3288', nome: 'BALA DOCILE CORACAO 190G' },
+    { codigo: '3703', nome: 'BALA DOCILE DENTES DE VAMPIRO 80G' },
+    { codigo: '4762', nome: 'BALA DOCILE EUCALIPITO' },
+    { codigo: '5895', nome: 'BALA DOCILE GELATINES BANANA 1K' },
+    { codigo: '4754', nome: 'BALA DOCILE GELATINES BANANA 80G' },
+    { codigo: '4647', nome: 'BALA DOCILE GELATINES CUBINHOS 80G' },
+    { codigo: '4648', nome: 'BALA DOCILE GELATINES MIX DIVERTIDO 80G' },
+    { codigo: '3280', nome: 'BALA DOCILE GOMOS 190G' },
+    { codigo: '2890', nome: 'BALA DOCILE GURT 190G' },
+    { codigo: '5838', nome: 'BALA DOCILE MELISSA 70G' },
+    { codigo: '3281', nome: 'BALA DOCILE MINHOCAS AZEDINHAS 190G' },
+    { codigo: '2528', nome: 'BALA DOCILE MIX AZEDINHO E DOCINHO 80G' },
+    { codigo: '4756', nome: 'BALA DOCILE PASTILHA AZEDINHA 90G' },
+    { codigo: '3282', nome: 'BALA DOCILE SINO FRUTAS 200G' },
+    { codigo: '4760', nome: 'BALA DOCILE VEGAN 100G' },
+    { codigo: '4577', nome: 'BALA DORI GELATINA AMORA 60G' },
+    { codigo: '4580', nome: 'BALA DORI GELATINA URSO 60G' },
+    { codigo: '4581', nome: 'BALA DORI MINHOCA SOUR 60G' },
+    { codigo: '3152', nome: 'BALA FINI AMORAS 15G' },
+    { codigo: '5530', nome: 'BALA FINI BANANA789 15G' },
+    { codigo: '3391', nome: 'BALA FINI BANANAS 100G' },
+    { codigo: '5528', nome: 'BALA FINI BEIJOS 15G' },
+    { codigo: '3151', nome: 'BALA FINI BEIJOS MORANGO 100G' },
+    { codigo: '3469', nome: 'BALA FINI BURGERS 100G' },
+    { codigo: '5321', nome: 'BALA FINI CHAPEU SELETOR 70G' },
+    { codigo: '3857', nome: 'BALA FINI CHICLE SALADA DE FRUTAS 80G' },
+    { codigo: '3150', nome: 'BALA FINI DENTADURA 100G' },
+    { codigo: '5227', nome: 'BALA FINI DENTADURA 15G' },
+    { codigo: '2523', nome: 'BALA FINI DENTADURA 35G' },
+    { codigo: '1213', nome: 'BALA FINI GIGANTE TUBES MOR AZEDINHO' },
+    { codigo: '3561', nome: 'BALA FINI ICE CREAM 90G' },
+    { codigo: '3153', nome: 'BALA FINI MARSHMALLOWS TORCAO 60G' },
+    { codigo: '3143', nome: 'BALA FINI MINHOCA CITRICAS 100G' },
+    { codigo: '5939', nome: 'BALA FINI MINHOCAS AZEDINHAS 15G' },
+    { codigo: '3149', nome: 'BALA FINI MINHOCAS BRILHOSA 100G' },
+    { codigo: '4288', nome: 'BALA FINI MINHOCAS SORTIDAS 15G' },
+    { codigo: '3393', nome: 'BALA FINI REGALIZ TUBES MORANGO 80G' },
+    { codigo: '3468', nome: 'BALA FINI REGALIZ TUBES MORANGO ACIDO 80G' },
+    { codigo: '4492', nome: 'BALA FINI TUBES AZEDINHOS MORANGO 35G' },
+    { codigo: '4491', nome: 'BALA FINI TUBES AZEDINHOS TUTTI-FRUTTI 35G' },
+    { codigo: '5649', nome: 'BALA FINI TUBES MORANGO E NATA 35G' },
+    { codigo: '5526', nome: 'BALA FINI TUBES TWISTER 15G' },
+    { codigo: '3392', nome: 'BALA FINI URSINHO BRILHO110G' },
+    { codigo: '5626', nome: 'BALA FINI URSINHOS 15G' },
+    { codigo: '5127', nome: 'BALA FLOPI 40G' },
+    { codigo: '2905', nome: 'BALA FRUITTELLA FRUTAS  41G' },
+    { codigo: '3323', nome: 'BALA FRUITTELLA LEITE CONDENSADO  41G' },
+    { codigo: '2874', nome: 'BALA FRUITTELLA MORANGO 40G' },
+    { codigo: '4733', nome: 'BALA GOMA JUBES 48G' },
+    { codigo: '5361', nome: 'BALA LIQ SPRAYTEEN 20 ML' },
+    { codigo: '815', nome: 'BALA MENTA UN.' },
+    { codigo: '4364', nome: 'BALA MENTOS FANTA LARANJA 37G' },
+    { codigo: '2914', nome: 'BALA MENTOS FRUIT 37,5GR' },
+    { codigo: '2084', nome: 'BALA MENTOS FRUTAS VERMELHAS 37,5GR' },
+    { codigo: '2771', nome: 'BALA MENTOS MINT' },
+    { codigo: '460', nome: 'BALA MENTOS MINT 37,5GR' },
+    { codigo: '5731', nome: 'BALA MENTOS RAINBOW 37,5GR' },
+    { codigo: '307', nome: 'BALA MENTOS TUTTI FRUTTI 37G' },
+    { codigo: '2700', nome: 'BALA MENTOS YOGURT 37G' },
+    { codigo: '5606', nome: 'BALA MINTY(FRUIT) 17G' },
+    { codigo: '2594', nome: 'BALA MINTY(MENTA) 17G' },
+    { codigo: '2908', nome: 'BALA MINTY(MORANGO) 17G' },
+    { codigo: '5892', nome: 'BALA MORANGUINHO RECHEADA UN' },
+    { codigo: '5919', nome: 'BALA OLHOS FAMINTOS DIPLOKO UN' },
+    { codigo: '1599', nome: 'BALAS SORTIDAS' },
+    { codigo: '5263', nome: 'BALINHA DO CORACAO LATA 40G' },
+    { codigo: '352', nome: 'BUBALOO HORTELA 5G' },
+    { codigo: '354', nome: 'BUBALOO MORANGO 5G' },
+    { codigo: '153', nome: 'BUBALOO TUTI FRUTI 5G' },
+    { codigo: '353', nome: 'BUBALOO UVA 5G' },
+    { codigo: '5888', nome: 'CANDY GEL AZEDINHO 113G' },
+    { codigo: '5037', nome: 'CHIC BUZZY CROC HORTELA' },
+    { codigo: '5352', nome: 'CHIC CLISS CARTELA SABORES 16,8G' },
+    { codigo: '463', nome: 'CHIC CLISS UN 2,8G' },
+    { codigo: '4264', nome: 'CHIC DANCLETS TUTTIFRUTI 13,5G' },
+    { codigo: '1325', nome: 'CHIC GUDS BALL 18G' },
+    { codigo: '459', nome: 'CHIC MENTOS' },
+    { codigo: '3828', nome: 'CHIC MENTOS P FRESH SPEARMINT 8G' },
+    { codigo: '894', nome: 'CHIC MENTOS P FRESH STRONG MINT 8,5G' },
+    { codigo: '3832', nome: 'CHIC MENTOS PURE MORANGO 8G' },
+    { codigo: '5889', nome: 'CHICLE DE BOLA BRINCLETS BALLS 18G' },
+    { codigo: '5890', nome: 'CHICLE DE BOLA BRINCLETS FRUTAS 18G' },
+    { codigo: '5891', nome: 'CHICLE DE BOLA BRINCLETS MELANCIA 18G' },
+    { codigo: '5879', nome: 'CHICLE DE BOLA CROCODILO/DRAGAO CRIATURAS 7,5G' },
+    { codigo: '5880', nome: 'CHICLE DE BOLA FESTBALL MORANGO 6G' },
+    { codigo: '5881', nome: 'CHICLE DE BOLA FESTBALL TUTTI-FRUTTI 6G' },
+    { codigo: '464', nome: 'CLISS TUTI FRUTI 2,9G' },
+    { codigo: '5262', nome: 'CONF GARRAFINHA + REFRI SABORES 30G' },
+    { codigo: '5234', nome: 'DIPILOKO ROLL 18G' },
+    { codigo: '5871', nome: 'DIPLOKO GEL. RECHEADA MINI JELLY BEAR 20G' },
+    { codigo: '5872', nome: 'DIPLOKO GEL. RECHEADA MINI JELLY DINO 20G' },
+    { codigo: '4998', nome: 'DOCIGOMA PICOLES AZEDINHOS 190G' },
+    { codigo: '6001', nome: 'DOCILE AMORAS MINI 15G' },
+    { codigo: '6000', nome: 'DOCILE MINI BANANA 15G' },
+    { codigo: '5999', nome: 'DOCILE MINI DNETE DE VAMPIRO AZEDINHO 15G' },
+    { codigo: '5998', nome: 'DOCILE MINI TIJOLINHO AZEDINHO 15G' },
+    { codigo: '4159', nome: 'FREEGELLS CEREJA' },
+    { codigo: '5893', nome: 'FREEGELLS FRUTAS TROPICAIS' },
+    { codigo: '4167', nome: 'FREEGELLS GUM  HORTELA 8G' },
+    { codigo: '4608', nome: 'FREEGELLS GUM CANELA 8G' },
+    { codigo: '5960', nome: 'FREEGELLS GUM EXTRA FORTE 8G' },
+    { codigo: '5663', nome: 'FREEGELLS GUM MELANCIA 8G' },
+    { codigo: '4278', nome: 'FREEGELLS GUM MENTA 8G' },
+    { codigo: '4279', nome: 'FREEGELLS GUM MORANGO 8G' },
+    { codigo: '5958', nome: 'FREEGELLS GUM ORIG. CHERRY 8G' },
+    { codigo: '5959', nome: 'FREEGELLS GUM ORIG. MINT 8G' },
+    { codigo: '4277', nome: 'FREEGELLS GUM TUTI FRUTI 8G' },
+    { codigo: '4829', nome: 'FREEGELLS VITA C CITRUS' },
+    { codigo: '3258', nome: 'GOMA DE MASCAR BLACK RHINO' },
+    { codigo: '3847', nome: 'GOMA MENTOS FRESH MINT 12G' },
+    { codigo: '3848', nome: 'GOMA MENTOS WINTERGREEN 12G' },
+    { codigo: '357', nome: 'HALLS CEREJA 28G' },
+    { codigo: '847', nome: 'HALLS MELANCIA 28G' },
+    { codigo: '113', nome: 'HALLS MENTA PRATA 28G' },
+    { codigo: '358', nome: 'HALLS MENTA VERDE 28G' },
+    { codigo: '359', nome: 'HALLS MENTOL 28G' },
+    { codigo: '360', nome: 'HALLS MORANGO 28G' },
+    { codigo: '361', nome: 'HALLS STRONG PRETO 27,5G' },
+    { codigo: '362', nome: 'HALLS UVA VERDE 28G' },
+    { codigo: '4662', nome: 'KIDS BALA CHEW BAR' },
+    { codigo: '5204', nome: 'MARSHMALLOW DOCILE ASSAR 220G' },
+    { codigo: '4767', nome: 'MARSHMALLOWS DOCILE UNICORNIO RECH 50G' },
+    { codigo: '4350', nome: 'MARSHMALLOWS FOFS COLORIDO 220G' },
+    { codigo: '5272', nome: 'MAX MALLOWS RECH 220G' },
+    { codigo: '5957', nome: 'MAXMALLOWS DOCILE PISTACHE 150G' },
+    { codigo: '4233', nome: 'MENTOS COOL WHITE FRESH MINT 8,5G' },
+    { codigo: '3830', nome: 'MENTOS FRESH GAR FRESH MINT 56G' },
+    { codigo: '3880', nome: 'MENTOS FRESH GAR UP2U 56G' },
+    { codigo: '4187', nome: 'MENTOS FRESH GAR VITAMINS 48G' },
+    { codigo: '3598', nome: 'MENTOS FRESH GAR WINTERGREEN 56G' },
+    { codigo: '4565', nome: 'MENTOS PURE FRESH GAR MOR 56G' },
+    { codigo: '5607', nome: 'PAST MINI MINTY HORTELA 14G' },
+    { codigo: '4655', nome: 'PAST MINI-MINTY  14G' },
+    { codigo: '5787', nome: 'PAST MINI-MINTY LARANJA 14G' },
+    { codigo: '5310', nome: 'PAST MINI-MINTY MORANGO 14G' },
+    { codigo: '5313', nome: 'PAST MINI-MINTY TUTI FRUTI 14G' },
+    { codigo: '5737', nome: 'PASTILHA DOCILE ROLLY MINTY 29G' },
+    { codigo: '4956', nome: 'PASTILHA MINTY MENTA 21G' },
+    { codigo: '5191', nome: 'PASTILHA MINTY MORANGO AZEDINHO 14G' },
+    { codigo: '5312', nome: 'PASTILHA VALDA FRIENDS 50G' },
+    { codigo: '5738', nome: 'PASTILHAS MENTOS CLEAR BREATH 21G' },
+    { codigo: '4873', nome: 'PIRULITO ALGODAO DOCE' },
+    { codigo: '2062', nome: 'PIRULITO BIG BIG MORANGO' },
+    { codigo: '382', nome: 'PIRULITO BIG BIG TUTTI FRUTTI' },
+    { codigo: '4560', nome: 'PIRULITO BOLA GOURMET' },
+    { codigo: '804', nome: 'PIRULITO CHUPA CHUPS' },
+    { codigo: '4393', nome: 'PIRULITO DIPLOKO CABECA DE ABOBORA' },
+    { codigo: '4774', nome: 'PIRULITO DIPLOKO CAVEIRAS MEXICANAS' },
+    { codigo: '4855', nome: 'PIRULITO DIPLOKO CITUS 10G' },
+    { codigo: '5786', nome: 'PIRULITO DIPLOKO COGUMELO 15G' },
+    { codigo: '4854', nome: 'PIRULITO DIPLOKO COLA 10G' },
+    { codigo: '5785', nome: 'PIRULITO DIPLOKO DONUTS 15G' },
+    { codigo: '5870', nome: 'PIRULITO DIPLOKO LOLLIPOP ARCO-IRIS CUBO 15G' },
+    { codigo: '5869', nome: 'PIRULITO DIPLOKO LOLLIPOP ARCO-IRIS POP 15G' },
+    { codigo: '5594', nome: 'PIRULITO DIPLOKO LOLLIPOP CUBO 15G' },
+    { codigo: '5856', nome: 'PIRULITO DIPLOKO LOLLIPOP DINO 15G' },
+    { codigo: '5868', nome: 'PIRULITO DIPLOKO LOLLIPOP ROSE 15G' },
+    { codigo: '4534', nome: 'PIRULITO DIPLOKO UNICORNIO 10G' },
+    { codigo: '5364', nome: 'PIRULITO FLOPITO TWIST TUTI FRUTI' },
+    { codigo: '5884', nome: 'PIRULITO GIRA GIRA GIRA DISPLAY' },
+    { codigo: '4532', nome: 'PIRULITO HALLOWEEN SORTIDOS' },
+    { codigo: '5922', nome: 'PIRULITO KISSES NEON DIPLOKO' },
+    { codigo: '5920', nome: 'PIRULITO LIMAO SICILIANO DIPLOKO' },
+    { codigo: '5834', nome: 'PIRULITO MEGALITO CEREJA' },
+    { codigo: '4370', nome: 'PIRULITO MIGUELITO 30G' },
+    { codigo: '5885', nome: 'PIRULITO PIROLE ICE FRUTAS' },
+    { codigo: '5531', nome: 'PIRULITO VOALOKO UN' },
+    { codigo: '383', nome: 'PIRULITO YOGURTE 100' },
+    { codigo: '5253', nome: 'PIRULITO ZOLLE FRAMBOESA' },
+    { codigo: '381', nome: 'PIRULITOS 7 BELO FRAMBOESA' },
+    { codigo: '5602', nome: 'PIRULUTO DIPLOKO CORAÇAO 10G' },
+    { codigo: '5360', nome: 'ROLLY MINTY MORANGO 29G' },
+    { codigo: '4909', nome: 'SPRING POP MORANGO 14G' },
+    { codigo: '773', nome: 'TIC TAC LARANJA 16G' },
+    { codigo: '385', nome: 'TIC TAC MENTA 16G' },
+    { codigo: '384', nome: 'TIC TAC MORANGO 16G' },
+    { codigo: '806', nome: 'TOPLINE MENTA 6,7G' },
+    { codigo: '2227', nome: 'TRIDENT  CEREJA  8G' },
+    { codigo: '1212', nome: 'TRIDENT CANELA 8G' },
+    { codigo: '466', nome: 'TRIDENT HERBAL 8G' },
+    { codigo: '467', nome: 'TRIDENT HORTELA 8G' },
+    { codigo: '873', nome: 'TRIDENT INTENSE 14S 25G' },
+    { codigo: '374', nome: 'TRIDENT INTENSE 8G' },
+    { codigo: '4047', nome: 'TRIDENT MAX HORTELAFRESCA 16,5G' },
+    { codigo: '4046', nome: 'TRIDENT MAX MENTABLUEBERRY 16,5G' },
+    { codigo: '5096', nome: 'TRIDENT MAX RASPBERRY 16,5G' },
+    { codigo: '885', nome: 'TRIDENT MELANCIA 14S 25G' },
+    { codigo: '376', nome: 'TRIDENT MELANCIA 8G' },
+    { codigo: '874', nome: 'TRIDENT MENTA  14S 25G' },
+    { codigo: '377', nome: 'TRIDENT MENTA 8G' },
+    { codigo: '378', nome: 'TRIDENT MENTA C/18 30,6G' },
+    { codigo: '379', nome: 'TRIDENT MORANGO 8G' },
+    { codigo: '3658', nome: 'TRIDENT POTE XFRESH MENTA 54G' },
+    { codigo: '3659', nome: 'TRIDENT POTE XFRESH TANGERINA  56G' },
+    { codigo: '4234', nome: 'TRIDENT POTE XSENSES MELANCIA 28G' },
+    { codigo: '3062', nome: 'TRIDENT POTE XSENSES MORANGO E LIMAO 54G' },
+    { codigo: '4265', nome: 'TRIDENT SABOR TUTTI-FRUTTI 14UN 25,2G' },
+    { codigo: '3233', nome: 'TRIDENT SENSES SOUR E SEWET BLUEBERRY 8G' },
+    { codigo: '132', nome: 'TRIDENT TUTI FRUTI 8G' },
+    { codigo: '4282', nome: 'TRIDENT X SENSES 28 UNI' },
+    { codigo: '5235', nome: 'TRIDENT X SENSES SM ACUCAR  8G' },
+    { codigo: '6022', nome: 'ALFAJO ODARA BRANCO 65G' },
+    { codigo: '5854', nome: 'ALFAJOR ALPINO AGUA NA BOCA 40G' },
+    { codigo: '5753', nome: 'ALFAJOR DOBLE-CACAHCA AMBURANA 65G' },
+    { codigo: '4947', nome: 'ALFAJOR DOCE DE LEITE 50G' },
+    { codigo: '5757', nome: 'ALFAJOR KITKAT AGUA NA BOCA 40G' },
+    { codigo: '4704', nome: 'ALFAJOR MAIS NAPOLITANO 60G' },
+    { codigo: '5756', nome: 'ALFAJOR NUTELA AGUA NA BOCA 40G' },
+    { codigo: '2306', nome: 'BISC AGUA E SAL 350G' },
+    { codigo: '5233', nome: 'BISC BAUDUCO BAUNILHA108G' },
+    { codigo: '5258', nome: 'BISC BAUDUCO CHOCOLATE 108G' },
+    { codigo: '5220', nome: 'BISC BAUDUCO DUPLO CHOC' },
+    { codigo: '5221', nome: 'BISC BAUDUCO MORANGO' },
+    { codigo: '5867', nome: 'BISC BOLINHO BAUDUCO BAUNILHA 40G' },
+    { codigo: '3015', nome: 'BISC BOLINHO BAUDUCO CHOCOLATE 40G' },
+    { codigo: '3761', nome: 'BISC BOLINHO BAUDUCO DUPLO CHOCO 40G' },
+    { codigo: '2993', nome: 'BISC BOLINHO BAUDUCO MORANGO 40G' },
+    { codigo: '4318', nome: 'BISC BONO  LIMAO 126G' },
+    { codigo: '408', nome: 'BISC BONO CHOCOLATE 90 G' },
+    { codigo: '5801', nome: 'BISC BONO COCO 90G' },
+    { codigo: '1220', nome: 'BISC BONO DOCE DE LEITE/ CHURROS 90G' },
+    { codigo: '1655', nome: 'BISC BONO MORANGO 90G' },
+    { codigo: '5333', nome: 'BISC CARTOON CHOC 85G' },
+    { codigo: '5689', nome: 'BISC CARTOON MORANGO 85G' },
+    { codigo: '5924', nome: 'BISC CASEIROS DANISA AMANTEIGADO 250G' },
+    { codigo: '5927', nome: 'BISC CASEIROS DANISA BROA 250G' },
+    { codigo: '5926', nome: 'BISC CASEIROS DANISA COCO 250G' },
+    { codigo: '5925', nome: 'BISC CASEIROS DANISA COOKIES TRAD. 250G' },
+    { codigo: '5930', nome: 'BISC CASEIROS DANISA MEL E AVEIA 250G' },
+    { codigo: '5928', nome: 'BISC CASEIROS DANISA NATAL 250G' },
+    { codigo: '5929', nome: 'BISC CASEIROS DANISA ROSCA 250G' },
+    { codigo: '5931', nome: 'BISC CASEIROS DANISA SORTIDO 250G' },
+    { codigo: '5977', nome: 'BISC CERAL MIX CACAU E CEREAI 135G' },
+    { codigo: '5978', nome: 'BISC CERAL MIX CACAU E CEREAI 135G (CLONE)' },
+    { codigo: '4248', nome: 'BISC CEREAL MIX AVEIA E MEL 135G' },
+    { codigo: '4249', nome: 'BISC CEREAL MIX BANANA CANELA 135G' },
+    { codigo: '4250', nome: 'BISC CEREAL MIX CACAU CEREAIS 135G' },
+    { codigo: '4735', nome: 'BISC CHOCOLICIA 132G' },
+    { codigo: '4417', nome: 'BISC CLUB SOCIAL BACON PROVOLONE 23,5G' },
+    { codigo: '390', nome: 'BISC CLUB SOCIAL ORIGINAL 24G' },
+    { codigo: '1608', nome: 'BISC CLUB SOCIAL PIZZA 23,5' },
+    { codigo: '977', nome: 'BISC COOKIE CHOCOLATE 80G' },
+    { codigo: '1112', nome: 'BISC COOKIE NEGRESCO 60G' },
+    { codigo: '5108', nome: 'BISC DA VOVO AMENTEIGADO 300G' },
+    { codigo: '5285', nome: 'BISC DA VOVO NATAL 300G' },
+    { codigo: '5106', nome: 'BISC DA VOVO ROSCA DE MILHO 300G' },
+    { codigo: '4232', nome: 'BISC FOMINHAS MOR. 130G' },
+    { codigo: '4340', nome: 'BISC GERMANI BROA DE MILHO 300G' },
+    { codigo: '5942', nome: 'BISC KLAIN AMEND CHOCOLATE BRANCO 250G' },
+    { codigo: '5213', nome: 'BISC KLAIN AMEND CHOCOLOVERS 44G' },
+    { codigo: '1235', nome: 'BISC KLAIN AMENDOIN COM CHOC AO LEITE 250G' },
+    { codigo: '5951', nome: 'BISC KLAIN AMENDOIN COM CHOCOLATE BRANCO 250G' },
+    { codigo: '1743', nome: 'BISC KLAIN BACON 138G' },
+    { codigo: '5215', nome: 'BISC KLAIN BROA DE AMENDOIM 38G' },
+    { codigo: '3009', nome: 'BISC KLAIN BROA DE AMENDOIN 250G' },
+    { codigo: '884', nome: 'BISC KLAIN CALABRESA 160G' },
+    { codigo: '5217', nome: 'BISC KLAIN CHOC BOLA 30G' },
+    { codigo: '5216', nome: 'BISC KLAIN CHOC ROSCA 38G' },
+    { codigo: '3051', nome: 'BISC KLAIN CHOCOBOLA 210G' },
+    { codigo: '2323', nome: 'BISC KLAIN CHOCOMENTA 300G' },
+    { codigo: '1703', nome: 'BISC KLAIN CHURRASCO 138G' },
+    { codigo: '5692', nome: 'BISC KLAIN DE POLVILHO TRADICIONAL 60G' },
+    { codigo: '5214', nome: 'BISC KLAIN MIGNON ASSADO 30G' },
+    { codigo: '5611', nome: 'BISC KLAIN MIGNON BACON 180G' },
+    { codigo: '5218', nome: 'BISC KLAIN MILHO 34G' },
+    { codigo: '1708', nome: 'BISC KLAIN OREGANO 138G' },
+    { codigo: '1705', nome: 'BISC KLAIN ORIGINAL 138G' },
+    { codigo: '245', nome: 'BISC KLAIN PAO DE MEL CHOCOLATE 250G' },
+    { codigo: '882', nome: 'BISC KLAIN PIZZA 138G' },
+    { codigo: '883', nome: 'BISC KLAIN QUEIJO 138G' },
+    { codigo: '2248', nome: 'BISC KLAIN QUEIJO 160G' },
+    { codigo: '4193', nome: 'BISC MINI OREO 35G' },
+    { codigo: '402', nome: 'BISC MOCA 140G' },
+    { codigo: '2744', nome: 'BISC MOUSSE CHOC AO LEITE 130G' },
+    { codigo: '4674', nome: 'BISC NEGRESCO MORANGO 90G' },
+    { codigo: '403', nome: 'BISC NEGRESCO ORIGINAL 90G' },
+    { codigo: '5802', nome: 'BISC NEGRESCO SABOR LIMAO SICILIANO 90G' },
+    { codigo: '4466', nome: 'BISC NESFIT BANANA AVEIA CANELA 160G' },
+    { codigo: '2756', nome: 'BISC NESFIT CACAU E CEREAIS 160G' },
+    { codigo: '4203', nome: 'BISC NESFIT COCO 160G' },
+    { codigo: '3675', nome: 'BISC NESFIT DELICE CACAU E AVELA 140G' },
+    { codigo: '3720', nome: 'BISC NESFIT DELICE MACA E CANELA 140G' },
+    { codigo: '389', nome: 'BISC NESFIT LARANJA E CENOURA 160G' },
+    { codigo: '750', nome: 'BISC NESFIT MORANGO E CEREAIS 160G' },
+    { codigo: '4531', nome: 'BISC OREO 15G' },
+    { codigo: '212', nome: 'BISC OREO 36G' },
+    { codigo: '211', nome: 'BISC OREO 90G' },
+    { codigo: '2820', nome: 'BISC OREO CHOCOLATE 90G' },
+    { codigo: '2887', nome: 'BISC OREO MORANGO 90G' },
+    { codigo: '5631', nome: 'BISC PARATI MARIA 370G' },
+    { codigo: '407', nome: 'BISC PASSA TEMPO' },
+    { codigo: '5803', nome: 'BISC PASSA TEMPO CHOCOLATE 130G' },
+    { codigo: '4316', nome: 'BISC PASSA TEMPO CHOCOMIX SABOR MORANGO 130G' },
+    { codigo: '4315', nome: 'BISC PASSA TEMPO MORANGO 130G' },
+    { codigo: '4847', nome: 'BISC PIRAQUE CHOCOLATE 80G' },
+    { codigo: '5675', nome: 'BISC PIRAQUE CREAM CRACKER 290G' },
+    { codigo: '412', nome: 'BISC PRESTIGIO 140G' },
+    { codigo: '1004', nome: 'BISC SORTIDOS 300G' },
+    { codigo: '4447', nome: 'BISC TORT CROSTATA CHOC BCO E GELEIA LIMAO SICILIANO 80G' },
+    { codigo: '4448', nome: 'BISC TORT CROSTATA GELEIA DE FRUTAS VERM. 80G' },
+    { codigo: '395', nome: 'BISC TORTINHA CHOC 140G' },
+    { codigo: '210', nome: 'BISC TORTINHA CHOC BRANCO 140G' },
+    { codigo: '401', nome: 'BISC TORTINHA CHOC. SUICO 160G' },
+    { codigo: '4438', nome: 'BISC TORTINHA DOCE DE LEITE 140G' },
+    { codigo: '2778', nome: 'BISC TORTINHA GELEIA DE MORANGO 160G' },
+    { codigo: '2934', nome: 'BISC TORTINHA GELEIA GOIABA 160G' },
+    { codigo: '399', nome: 'BISC TORTINHA LIMAO 160G' },
+    { codigo: '397', nome: 'BISC TORTINHA MORANGO 140G' },
+    { codigo: '2930', nome: 'BISC TRAKINAS + RECHEIO CHOCOLATE 126G' },
+    { codigo: '4342', nome: 'BISC TRAKINAS BUBBALOO TUTI FRUTI 126G' },
+    { codigo: '3381', nome: 'BISC TRAKINAS CHOCOLATE 126G' },
+    { codigo: '1294', nome: 'BISC TRAKINAS CHOCOLATE BRANCO 126G' },
+    { codigo: '2816', nome: 'BISC TRAKINAS MEIO A MEIO MORANGO 126G' },
+    { codigo: '5730', nome: 'BISC TRAKINAS MEIO CHOC.BRANCO E CHOC.PRETO 126G' },
+    { codigo: '771', nome: 'BISC TRAKINAS MORANGO 126G' },
+    { codigo: '4634', nome: 'BISC TRAKINAS TORTINHA DE LIMAO 126G' },
+    { codigo: '826', nome: 'BISC TUCS BACON 100G' },
+    { codigo: '803', nome: 'BISC TUCS CHURRASCO 100G' },
+    { codigo: '3549', nome: 'BISC TUCS INTEGRAL 100G' },
+    { codigo: '824', nome: 'BISC TUCS PIZZA 100G' },
+    { codigo: '4937', nome: 'BISC TUCS PRESUNTO100G' },
+    { codigo: '825', nome: 'BISC TUCS QUEIJO 100G' },
+    { codigo: '2722', nome: 'BISC TUCS SALAME 100G' },
+    { codigo: '802', nome: 'BISC TUCS TRADICIONAL 100G' },
+    { codigo: '3419', nome: 'BISC VISCONTI CHOCOLATE 125G' },
+    { codigo: '2530', nome: 'BISC VISCONTI MORANGO 125G' },
+    { codigo: '5683', nome: 'BISC. PARATI FRANCESINHO 400GR' },
+    { codigo: '6013', nome: 'BISC. RECH. CARTOON 85GR BRIGADEIRO' },
+    { codigo: '6014', nome: 'BISC. RECH. CARTOON 85GR DUO CHOC' },
+    { codigo: '6015', nome: 'BISC. RECH. CARTOON 85GR FLOCOS' },
+    { codigo: '5003', nome: 'BOLINHO BAUDUCO GOTAS CHOCOLATE 40G' },
+    { codigo: '614', nome: 'CASEIRAS DA VOVO BIC. AMENDOIM 300G' },
+    { codigo: '5107', nome: 'CASEIRAS DA VOVO BISC. DE GOIABINHA 300G' },
+    { codigo: '5105', nome: 'CASEIRAS DA VOVO BISC. POLVILHO DOCE 280G' },
+    { codigo: '935', nome: 'CASEIRAS DA VOVO MANTEIGA 300G' },
+    { codigo: '5150', nome: 'CASEIRAS DA VOVO ROSCA DE COCO 300G' },
+    { codigo: '5149', nome: 'CASEIRAS DA VOVO ROSCA DE NATA 300G' },
+    { codigo: '5366', nome: 'CHOCOBISCUIT NESTLE AO LEITE 78G' },
+    { codigo: '4653', nome: 'COOKIES CHOC PIRAQUE 80G' },
+    { codigo: '5267', nome: 'FLAY CEBOLA E SALCA 40G' },
+    { codigo: '4431', nome: 'MANDOLATO 30G' },
+    { codigo: '4083', nome: 'MINUETO ROLINHOS MINUETO 40G' },
+    { codigo: '4839', nome: 'PACOQUINHA HAMBURGUESA 60G' },
+    { codigo: '4423', nome: 'RAPADURA TORRAO MOIDO 80G' },
+    { codigo: '5632', nome: 'SALG FRONTERA CHEESE TORTILLA 125G' },
+    { codigo: '4819', nome: 'SALG PIRAQUE CEBOLA 90G' },
+    { codigo: '4132', nome: 'SALG PIRAQUE ORIGINAL E INTEGRAL 23G' },
+    { codigo: '5849', nome: 'SALG PIRAQUE SABOR PEPPERONI 50G' },
+    { codigo: '4325', nome: 'SALG SENSE REQUEIJAO CREMOSO 80G' },
+    { codigo: '4850', nome: 'SALGADAO KLAIN CROCANTE 100G' },
+    { codigo: '4904', nome: 'SALGADINHO BEIJA FLOR SABOR BACON 90G' },
+    { codigo: '3403', nome: 'TORRONE 15G (KRAKITO)' },
+    { codigo: '409', nome: 'TORRONI 25G' },
+    { codigo: '1671', nome: 'WAFER  PRESTIGIO 110G' },
+    { codigo: '2747', nome: 'WAFER BAUDUCCO CHOC 140G' },
+    { codigo: '2985', nome: 'WAFER BAUDUCCO MORANGO 140G' },
+    { codigo: '5109', nome: 'WAFER BONO LIMAO 110G' },
+    { codigo: '1215', nome: 'WAFER ISABELA CHO BRANCO 145G' },
+    { codigo: '1564', nome: 'WAFER ISABELA CHOC SUICO 100 GR' },
+    { codigo: '411', nome: 'WAFER ISABELA CHOCOLATE 100GR' },
+    { codigo: '5511', nome: 'WAFER ISABELA DOCE DE LEITE 100 GR' },
+    { codigo: '1222', nome: 'WAFER ISABELA LIMAO 145G' },
+    { codigo: '1506', nome: 'WAFER ISABELA MORANGO 100 GR' },
+    { codigo: '5269', nome: 'WAFER MINUETO BRIGADEIRO 81G' },
+    { codigo: '5271', nome: 'WAFER MINUETO CHOC 81G' },
+    { codigo: '5812', nome: 'WAFER MINUETO CHOC E AVELA 81G' },
+    { codigo: '5270', nome: 'WAFER MINUETO CHOC E BAUNILHA 81G' },
+    { codigo: '5342', nome: 'WAFER MINUETO LIMAO 81G' },
+    { codigo: '5268', nome: 'WAFER MINUETO MORANGO 81G' },
+    { codigo: '1234', nome: 'WAFER NEGRESCO 110G' },
+    { codigo: '2608', nome: 'WAFER PASSION BRANCO/ CHOC 80G' },
+    { codigo: '2991', nome: 'WAFER VISCONTI CHOC 120G' },
+    { codigo: '3851', nome: 'WAFER VISCONTI MORANGO 120G' },
+    { codigo: '4107', nome: 'AMANDITA 200 G' },
+    { codigo: '5733', nome: 'BALA DE GOMA FUNDIPPERZ  54G' },
+    { codigo: '5732', nome: 'BALA DE GOMA FUNDIPPERZ MINIOS 54G' },
+    { codigo: '6018', nome: 'BARRA CEREAIS FRUTAS VERMELHAS CHOC 22G' },
+    { codigo: '5933', nome: 'BARRINHA BAUDUCO GOIABINHA 25G' },
+    { codigo: '2340', nome: 'BIBS AO LEITE 40G' },
+    { codigo: '2381', nome: 'BIBS CHOC BRANCO 40G' },
+    { codigo: '748', nome: 'BIBS STICKS BEIJINHO 32G' },
+    { codigo: '5362', nome: 'BOMBI SURPRESA' },
+    { codigo: '1349', nome: 'BOMBOM AMOR CARIOCA 200G' },
+    { codigo: '2159', nome: 'BOMBOM AMOR CARIOCA DUO 200G' },
+    { codigo: '4896', nome: 'BOMBOM DELICIAS 8G' },
+    { codigo: '167', nome: 'BOMBOM OURO BRANCO 21,5G' },
+    { codigo: '2385', nome: 'BOMBOM SERENATA DE AMOR 20G' },
+    { codigo: '214', nome: 'BOMBOM SONHO DE VALSA 21,5G,52' },
+    { codigo: '760', nome: 'BOMBONS ESPECIALIDADES NESTLE 251G' },
+    { codigo: '4410', nome: 'BRIGADEIRO DOCE MINAS 50G' },
+    { codigo: '812', nome: 'CHOC ALPINO 25G' },
+    { codigo: '218', nome: 'CHOC ARCOR AO LEITE 80G' },
+    { codigo: '219', nome: 'CHOC ARCOR BRIGADEIRO 80G' },
+    { codigo: '1554', nome: 'CHOC ARCOR CAIXA 146G' },
+    { codigo: '3081', nome: 'CHOC ARCOR ROCKLETS 80G' },
+    { codigo: '3045', nome: 'CHOC ARCOR ROCKLETS BRANCO 80G' },
+    { codigo: '5822', nome: 'CHOC AURUM  20G' },
+    { codigo: '3852', nome: 'CHOC BARRA FERRERO ROCHER BRANCO 90G' },
+    { codigo: '4106', nome: 'CHOC BARRA FERRERO ROCHER CHOC. AO LEITE 100G' },
+    { codigo: '1510', nome: 'CHOC BARRA GOROTO CROCANTE 100GR' },
+    { codigo: '222', nome: 'CHOC BATON BRANCO' },
+    { codigo: '2669', nome: 'CHOC BATON DUO 16G' },
+    { codigo: '221', nome: 'CHOC BATON PRETO' },
+    { codigo: '2851', nome: 'CHOC BIBS CHOC. PRETO/BRANCO 40G' },
+    { codigo: '4876', nome: 'CHOC BIBS DUO 40G' },
+    { codigo: '4805', nome: 'CHOC BIBS MIX LEITE BRANCO 120G' },
+    { codigo: '5304', nome: 'CHOC BIBS NAPOLITANO  40G' },
+    { codigo: '4893', nome: 'CHOC BIBS PASSAS 40G' },
+    { codigo: '4800', nome: 'CHOC BIBS STICKS AVELA 32G' },
+    { codigo: '5286', nome: 'CHOC BIBS STICKS CITRUS 32G' },
+    { codigo: '4892', nome: 'CHOC BIBS STICKS DARK 32G' },
+    { codigo: '2438', nome: 'CHOC BIS BLACK 126G' },
+    { codigo: '224', nome: 'CHOC BIS BRANCO 100,8G' },
+    { codigo: '225', nome: 'CHOC BIS PRETO 100,8G' },
+    { codigo: '781', nome: 'CHOC BIS XTRA  45G' },
+    { codigo: '3003', nome: 'CHOC BIS XTRA BLACK 45G' },
+    { codigo: '3092', nome: 'CHOC BIS XTRA BRANCO 45G' },
+    { codigo: '3095', nome: 'CHOC BIS XTRA OREO 45G' },
+    { codigo: '4853', nome: 'CHOC BOMBOM BIBS LOVE ME 13,7G' },
+    { codigo: '4776', nome: 'CHOC CARIBE 28G' },
+    { codigo: '226', nome: 'CHOC CHARGE 40G' },
+    { codigo: '227', nome: 'CHOC CHOKITO 32G' },
+    { codigo: '4133', nome: 'CHOC COELHO  36G' },
+    { codigo: '5553', nome: 'CHOC COELHO 12G' },
+    { codigo: '5855', nome: 'CHOC COELHO KINDER 45G' },
+    { codigo: '5354', nome: 'CHOC COFFEE AO LEITE 20G' },
+    { codigo: '5353', nome: 'CHOC COFFEE CHOC BRANCO 80G' },
+    { codigo: '229', nome: 'CHOC COLORETI FESTA COLORIDO 18G' },
+    { codigo: '782', nome: 'CHOC DIAMANTE E LAKA 80G' },
+    { codigo: '209', nome: 'CHOC DIAMANTE NEGRO 80G' },
+    { codigo: '5355', nome: 'CHOC FLORESTAL BAL CORACAO BRANCO 20G' },
+    { codigo: '5351', nome: 'CHOC FLORESTAL DINOS 80G' },
+    { codigo: '5350', nome: 'CHOC FLORESTAL UNICORNIOS 80G' },
+    { codigo: '4568', nome: 'CHOC GAROTO AO LEITE 80G' },
+    { codigo: '5173', nome: 'CHOC GAROTO BRANCO 80G' },
+    { codigo: '5174', nome: 'CHOC GAROTO CAJU PASSAS 80G' },
+    { codigo: '5099', nome: 'CHOC GAROTO CHOC TRIO BONO 90G' },
+    { codigo: '5223', nome: 'CHOC GAROTO CHOC TRIO NEGRESCO 90G' },
+    { codigo: '5337', nome: 'CHOC GAROTO CROCANTE 25G' },
+    { codigo: '5175', nome: 'CHOC GAROTO CROCANTE 80G' },
+    { codigo: '4569', nome: 'CHOC GAROTO MEIO AMARGO 80G' },
+    { codigo: '5330', nome: 'CHOC GAROTO NEGRESCO 80G' },
+    { codigo: '233', nome: 'CHOC KINDER 12,5G' },
+    { codigo: '2631', nome: 'CHOC KINDER BUENO 43G' },
+    { codigo: '2714', nome: 'CHOC KINDER BUENO WHITE 39G' },
+    { codigo: '234', nome: 'CHOC KINDER JOY 20G' },
+    { codigo: '235', nome: 'CHOC KINDER OVO 20G' },
+    { codigo: '4298', nome: 'CHOC KINDER TRONKY 18G' },
+    { codigo: '236', nome: 'CHOC KIT KAT 45G' },
+    { codigo: '3366', nome: 'CHOC KIT KAT CHOC  41,5G' },
+    { codigo: '3336', nome: 'CHOC KIT KAT WHITE 41,5G' },
+    { codigo: '5375', nome: 'CHOC LACTA AMARO 40% CACAU 80G' },
+    { codigo: '4263', nome: 'CHOC LACTA AO LEITE 34' },
+    { codigo: '875', nome: 'CHOC LACTA AO LEITE 80G' },
+    { codigo: '4125', nome: 'CHOC LACTA OREO CHOCOLATE 90G' },
+    { codigo: '4810', nome: 'CHOC LACTA OURO BRANCO BARRA 98G' },
+    { codigo: '2444', nome: 'CHOC LACTA SHOT AMENDOIN 80G' },
+    { codigo: '4809', nome: 'CHOC LACTA SONHO DE VALSA BARRA 98G' },
+    { codigo: '1998', nome: 'CHOC LAKA BRANCO 80G' },
+    { codigo: '783', nome: 'CHOC LAKA OREO 80G' },
+    { codigo: '240', nome: 'CHOC LOLLO 28G' },
+    { codigo: '2803', nome: 'CHOC M&MS AMENDOIN 45G' },
+    { codigo: '2661', nome: 'CHOC MMS MINIS TUBO 30G' },
+    { codigo: '315', nome: 'CHOC MOCA 38G' },
+    { codigo: '3273', nome: 'CHOC NESTLE ALPINO 90GR' },
+    { codigo: '4905', nome: 'CHOC NESTLE CHOC TRIO 90G' },
+    { codigo: '5904', nome: 'CHOC NESTLE CHOC TRIO AVELA 90G' },
+    { codigo: '244', nome: 'CHOC NESTLE CLASSIC DUO 80G' },
+    { codigo: '4837', nome: 'CHOC NESTLE CLASSIC PRESTIGIO 80G' },
+    { codigo: '246', nome: 'CHOC NESTLE CRUNCH 80G' },
+    { codigo: '4362', nome: 'CHOC NEUGBAUER AMENDOIM 60G' },
+    { codigo: '5311', nome: 'CHOC NEUGBAUER AMENDOIM 80G' },
+    { codigo: '4825', nome: 'CHOC NEUGBAUER AO LEITE 60G' },
+    { codigo: '3586', nome: 'CHOC NEUGBAUER AO LEITE C/ FLOCOS 90G' },
+    { codigo: '4363', nome: 'CHOC NEUGBAUER PRETO E BRANCO 65G' },
+    { codigo: '4963', nome: 'CHOC NEUGEBAUE AMENDOLATE 80G' },
+    { codigo: '3296', nome: 'CHOC NEUGEBAUER AO LEITE 80G' },
+    { codigo: '4891', nome: 'CHOC NEUGEBAUER BRANCO 80G' },
+    { codigo: '4889', nome: 'CHOC NEUGEBAUER CHOC BRANCO 9G' },
+    { codigo: '3714', nome: 'CHOC NEUGEBAUER COOKIES 90G' },
+    { codigo: '4145', nome: 'CHOC NEUGEBAUER MEIO AMARGO 90G' },
+    { codigo: '2576', nome: 'CHOC NEUGEBAUER NAPOLITANO 70G' },
+    { codigo: '3972', nome: 'CHOC NEUGEBAUER PRETO E BRANCO 80G' },
+    { codigo: '5740', nome: 'CHOC NEUGEBAUER SUPREME 90G' },
+    { codigo: '4557', nome: 'CHOC PREMIUM 70% CACAU COM ALFARROBA' },
+    { codigo: '4501', nome: 'CHOC PREMIUM 70% CACAU E MENTA 100G' },
+    { codigo: '248', nome: 'CHOC PRESTIGIO 33G' },
+    { codigo: '4914', nome: 'CHOC PRESTIGIO BRANCO 33G' },
+    { codigo: '5035', nome: 'CHOC PRESTIGIO DARK 33G' },
+    { codigo: '5833', nome: 'CHOC PRESTIGIO DOCE DE LEITE 33G' },
+    { codigo: '3938', nome: 'CHOC RAFAELLO  150G' },
+    { codigo: '249', nome: 'CHOC REFEICAO 9G' },
+    { codigo: '4826', nome: 'CHOC REFEICAO BARRA 60G' },
+    { codigo: '489', nome: 'CHOC SENSACAO MORANGO 38G' },
+    { codigo: '491', nome: 'CHOC SNICKERS 42G' },
+    { codigo: '5653', nome: 'CHOC SNICKERS BRANCO 45G' },
+    { codigo: '4013', nome: 'CHOC SNICKERS DARK 42G' },
+    { codigo: '5852', nome: 'CHOC SNICKERS MARACUJA 42G' },
+    { codigo: '5725', nome: 'CHOC SNICKERS MORANGO 42G' },
+    { codigo: '4527', nome: 'CHOC SNICKERS PE DE MOLEQUE 42G' },
+    { codigo: '1782', nome: 'CHOC STICK OURO BRANCO 25G' },
+    { codigo: '4799', nome: 'CHOC STICKS AMOR CARIOCA BRANCO 32G' },
+    { codigo: '5303', nome: 'CHOC STICKS BRIGADEIROS 32G' },
+    { codigo: '4087', nome: 'CHOC STICKS MOUSSE LIMAO 32GR' },
+    { codigo: '4798', nome: 'CHOC STICKS NAPOLITANO 32G' },
+    { codigo: '3971', nome: 'CHOC STICKS STIKADINHO 32GR' },
+    { codigo: '493', nome: 'CHOC STIKADINHO 12,3G' },
+    { codigo: '3608', nome: 'CHOC STIKADINHO 70G' },
+    { codigo: '494', nome: 'CHOC SUFLAIR 50G' },
+    { codigo: '4827', nome: 'CHOC SUPREME AO LEITE 9G' },
+    { codigo: '5190', nome: 'CHOC TALENTO AMENDOS PASSAS 85G' },
+    { codigo: '5277', nome: 'CHOC TALENTO CASTANHA DE CAJU 85G' },
+    { codigo: '4886', nome: 'CHOC TALENTO CASTANHAS DO PARA 85G' },
+    { codigo: '5279', nome: 'CHOC TALENTO CEREAIS E PASSAS 85G' },
+    { codigo: '4887', nome: 'CHOC TALENTO DOCE DE LEITE 85G' },
+    { codigo: '5278', nome: 'CHOC TALENTO MEIO AMARGO AMENDOAS 85G' },
+    { codigo: '4792', nome: 'CHOC TALENTO RECHEADO AVELAS 85G' },
+    { codigo: '4538', nome: 'CHOC TALENTO RECHEADO MORANGO85G' },
+    { codigo: '2673', nome: 'CHOC TRENTO ALLEGRO AMENDOIN 35G' },
+    { codigo: '2855', nome: 'CHOC TRENTO ALLEGRO BRANCO 35G' },
+    { codigo: '4158', nome: 'CHOC TRENTO BITES AO LEITE 40G' },
+    { codigo: '5964', nome: 'CHOC TRENTO BITES BRANCO-DARK 40G' },
+    { codigo: '5743', nome: 'CHOC TRENTO CARAMELO 32GR' },
+    { codigo: '2569', nome: 'CHOC TRENTO CHEESECAKE DE MORANGO 32GR' },
+    { codigo: '2565', nome: 'CHOC TRENTO CHOCOLATE 32G' },
+    { codigo: '2736', nome: 'CHOC TRENTO CHOCOLATE 32GR' },
+    { codigo: '2567', nome: 'CHOC TRENTO DARK 32GR' },
+    { codigo: '5700', nome: 'CHOC TRENTO DUO 29G' },
+    { codigo: '5596', nome: 'CHOC TRENTO MASSIMO BANOFFEE 32G' },
+    { codigo: '2371', nome: 'CHOC TRENTO MASSIMO BRANCO COM COOKIES 25G' },
+    { codigo: '4549', nome: 'CHOC TRENTO MASSIMO BROWNIE 25G' },
+    { codigo: '3197', nome: 'CHOC TRENTO MASSIMO CHOCOLATE 25GR' },
+    { codigo: '5799', nome: 'CHOC TRENTO MASSIMO COCO 25G' },
+    { codigo: '2857', nome: 'CHOC TRENTO MASSIMO COCO 35GR' },
+    { codigo: '2515', nome: 'CHOC TRENTO MASSIMO DARK 25G' },
+    { codigo: '2970', nome: 'CHOC TRENTO MASSIMO DUO 25GR' },
+    { codigo: '5597', nome: 'CHOC TRENTO MASSIMO IOGURTE GREGO FRUTAS VERMELHO 25G' },
+    { codigo: '5800', nome: 'CHOC TRENTO MASSIMO NUTS 25G' },
+    { codigo: '5192', nome: 'CHOC TRENTO MILK 32GR' },
+    { codigo: '4548', nome: 'CHOC TRENTO MOCACCINO 32G' },
+    { codigo: '2563', nome: 'CHOC TRENTO MOUSE DE MARACUJA 32G' },
+    { codigo: '5544', nome: 'CHOC TRENTO SPECIAL DARK AVELA' },
+    { codigo: '5222', nome: 'CHOC TRENTO T-PRO CHOC 26G' },
+    { codigo: '5298', nome: 'CHOC TRENTO T-PRO COOKIES CREAM 26G' },
+    { codigo: '5188', nome: 'CHOC TRENTO TRUFA DE CHOC' },
+    { codigo: '5973', nome: 'CHOCOLATE KITKAT COCONUT 41,5G' },
+    { codigo: '976', nome: 'CHOCOLATE M&MS 45G' },
+    { codigo: '5503', nome: 'DOCE BEIJO COM CHOC 50G' },
+    { codigo: '5228', nome: 'DOCE SOLTEIRAO BRIG 50G' },
+    { codigo: '5112', nome: 'DUCREM' },
+    { codigo: '5735', nome: 'MINI CATZ' },
+    { codigo: '5734', nome: 'MINI PETZ' },
+    { codigo: '5961', nome: 'OURO DE MINAS' },
+    { codigo: '5500', nome: 'OURO DE MINAS BEIJO 50G' },
+    { codigo: '4913', nome: 'OVINHO SURPRESA DINOSAURO 100G' },
+    { codigo: '4911', nome: 'OVINHO SURPRESA UNICORNIO 100G' },
+    { codigo: '5894', nome: 'OVISCO POTE OVO CHOCOLATE' },
+    { codigo: '2613', nome: 'OVO BLOCO DINO' },
+    { codigo: '2048', nome: 'OVO BLOCO VEICULOS DE GUERRA' },
+    { codigo: '4908', nome: 'OVO BOB ESPONJA 18G' },
+    { codigo: '4912', nome: 'OVO CHOCO DINO' },
+    { codigo: '5899', nome: 'OVO DE CHOC AO LEITE DIVINE 100G' },
+    { codigo: '5811', nome: 'OVO HOTWHEELS 18G' },
+    { codigo: '5810', nome: 'OVO SONIC 18G' },
+    { codigo: '3601', nome: 'OVO SURPRESA DIP LOKO 11G' },
+    { codigo: '5903', nome: 'TABLETE CHOCOLATE SURPRESA NESTLE 20G' },
+    { codigo: '5995', nome: 'TRENTO MARULA 29G' },
+    { codigo: '5996', nome: 'TRENTO MASSIMO AMENDOIM CARAMELO 15G' },
+    { codigo: '5994', nome: 'TRENTO SLIM CHOCOLATE 20G' },
+    { codigo: '5993', nome: 'TRENTO SLIM CREME 20G' },
+    { codigo: '4337', nome: 'BAURU ASSADO 140G' },
+    { codigo: '5032', nome: 'CACHORRO QUENTE DE FORNO' },
+    { codigo: '3463', nome: 'CALZONE RECANTO VERDE CHOC. PRETO 350G' },
+    { codigo: '4453', nome: 'COMBO CORTESIA TROCA DE OLEO' },
+    { codigo: '5613', nome: 'COMBO PAO DE QUEIJO+CAFE' },
+    { codigo: '3687', nome: 'COXINHA FRANGO C/ REQUEIJAO' },
+    { codigo: '3893', nome: 'CROISSANT MISTO 120G' },
+    { codigo: '4883', nome: 'CX DE MINI COXINHA DE FRANGO 350G' },
+    { codigo: '5057', nome: 'DONUT NEVADA' },
+    { codigo: '4058', nome: 'ESPETINHO FRITO UN' },
+    { codigo: '3554', nome: 'FAGOTTO 160G' },
+    { codigo: '3901', nome: 'FOLHADO DE SALSICHA' },
+    { codigo: '3834', nome: 'LASANHA SEARA 350G' },
+    { codigo: '4039', nome: 'MUFFIN BAUNILHA C/ GOTAS' },
+    { codigo: '4038', nome: 'MUFFIN CHOCOLATE C/ GOTAS' },
+    { codigo: '4878', nome: 'PANITO LEVE SABOR' },
+    { codigo: '3379', nome: 'PAO DE QUEIJO' },
+    { codigo: '3998', nome: 'PAO DE QUEIJO C /CATUPIRI' },
+    { codigo: '5031', nome: 'PAO DE QUEIJO COPO' },
+    { codigo: '4059', nome: 'PAO DE QUEIJO RECHEADO UN' },
+    { codigo: '3380', nome: 'PASTEL' },
+    { codigo: '4879', nome: 'PASTEL DE BELEM' },
+    { codigo: '2070', nome: 'PASTEL DE FORNO' },
+    { codigo: '4740', nome: 'PASTEL DE NATA TRIGELE' },
+    { codigo: '2694', nome: 'PASTEL FOLHADO' },
+    { codigo: '3691', nome: 'PIZZA BROTINHO' },
+    { codigo: '5612', nome: 'PIZZA FATIA TRIGELE' },
+    { codigo: '4374', nome: 'PIZZA PEQUENA DOCE' },
+    { codigo: '4335', nome: 'PIZZA PEQUENA TRIGELE 140GR' },
+    { codigo: '3452', nome: 'PIZZA RECANTO VERDE ALCATRA/ACEBOLADA 700G' },
+    { codigo: '4130', nome: 'PIZZA RECANTO VERDE BACON 700G' },
+    { codigo: '3453', nome: 'PIZZA RECANTO VERDE PICANHA AO ALHO 700G' },
+    { codigo: '5255', nome: 'QUEIJO RALADO 100G' },
+    { codigo: '3747', nome: 'RISOLES' },
+    { codigo: '4880', nome: 'SANDUICHE CLASSICO LEVE SABOR' },
+    { codigo: '185', nome: 'ACUCAR 1KG' },
+    { codigo: '988', nome: 'ACUCAR 2K' },
+    { codigo: '5932', nome: 'ADOCANTE ZERO CAL 100ML' },
+    { codigo: '5992', nome: 'ADOCYL LIQ SACARINA FR 100ML' },
+    { codigo: '4793', nome: 'ALGODAO DOCE 25G' },
+    { codigo: '5965', nome: 'ALGODAO DOCE BOLL 20G' },
+    { codigo: '5363', nome: 'AMENDOLANDIA PACOCA MOLECAO 50G' },
+    { codigo: '152', nome: 'ARROZ REI ARTUR 2K' },
+    { codigo: '2118', nome: 'ARROZ REI ARTUR 5K' },
+    { codigo: '3216', nome: 'AZEITE DE OLIVA EXTRAVIRGEM' },
+    { codigo: '55', nome: 'BISC CASEIRO DA VOVO MAIZENA 300G' },
+    { codigo: '5092', nome: 'CAFE CORTESIA BRIGADA' },
+    { codigo: '186', nome: 'CATCHUP ODERICH 200G' },
+    { codigo: '5260', nome: 'CEREAL NATURALE 7 GRAOS 22G' },
+    { codigo: '4627', nome: 'CEREAL NATURALE BANANA AVEIA 25G' },
+    { codigo: '4624', nome: 'CEREAL NATURALE BRIGADEIRO AVEIA CHOC 25G' },
+    { codigo: '5259', nome: 'CEREAL NATURALE CASTANHAS 22G' },
+    { codigo: '4623', nome: 'CEREAL NATURALE MOR AVEIA CHOC 25G' },
+    { codigo: '866', nome: 'CEREAL NESCAU NESTLE 210G' },
+    { codigo: '189', nome: 'CREME DE LEITE  200G' },
+    { codigo: '1336', nome: 'CREME DENTAL 50G' },
+    { codigo: '2684', nome: 'CROQUETE' },
+    { codigo: '1019', nome: 'DOCE DE FRUTAS' },
+    { codigo: '3378', nome: 'ENROLADINHO' },
+    { codigo: '5231', nome: 'ERVA NATUMATE COM ACUCAR 1K' },
+    { codigo: '5232', nome: 'ERVA NATUMATE MOIDA GROSSA 1K' },
+    { codigo: '2552', nome: 'ERVA NATUMATE SEM ACUCAR 1K' },
+    { codigo: '190', nome: 'ERVA VALERIO BRANCA SEM ACUCAR 1K' },
+    { codigo: '906', nome: 'ERVA VALERIO MOIDA GROSSA 1KG' },
+    { codigo: '2210', nome: 'ERVA VALERIO NATIVA1KG' },
+    { codigo: '191', nome: 'ERVILHA QUERO 170G' },
+    { codigo: '836', nome: 'EXTRATO DE TOMATE' },
+    { codigo: '2197', nome: 'FARINHA DE TRIGO 1KG' },
+    { codigo: '1029', nome: 'FEIJAO 1K' },
+    { codigo: '1032', nome: 'GELATINA' },
+    { codigo: '1770', nome: 'GOIABADA 300G' },
+    { codigo: '4336', nome: 'HAMBURGAO ASSADO 150G' },
+    { codigo: '3412', nome: 'LANCHES DIVERSOS' },
+    { codigo: '194', nome: 'LEITE 1L' },
+    { codigo: '195', nome: 'LEITE CONDENSADO 395G' },
+    { codigo: '1541', nome: 'MAIONESE 200G' },
+    { codigo: '903', nome: 'MASSA  PARAFUSO 500G' },
+    { codigo: '2163', nome: 'MASSA ESPAGUETE 500G' },
+    { codigo: '5703', nome: 'MASSA LAMEN TODESCHINI CARNE 85G' },
+    { codigo: '5702', nome: 'MASSA LAMEN TODESCHINI GAL. CAIPIRA 85G' },
+    { codigo: '1046', nome: 'MILHO PARA PIPOCA' },
+    { codigo: '197', nome: 'MILHO VERDE EM CONSERVA 170G' },
+    { codigo: '907', nome: 'MILHO VERDE SACHE 170G' },
+    { codigo: '5752', nome: 'MINAS DE LEITE 25G' },
+    { codigo: '198', nome: 'MOSTARDA ODERICH 190G' },
+    { codigo: '5842', nome: 'NARIZ ENTUPIDO UN' },
+    { codigo: '5696', nome: 'NESCAFE BOM JESUS/SACHE 40G' },
+    { codigo: '199', nome: 'NESCAFE ORIGINAL/ SACHE 40G' },
+    { codigo: '5982', nome: 'OKEIZITOS BACON  52G' },
+    { codigo: '5981', nome: 'OKEIZITOS CHURRASCO  52G' },
+    { codigo: '200', nome: 'OLEO SOJA  900ML' },
+    { codigo: '4134', nome: 'PACOCA DE AMENDOIM  65G' },
+    { codigo: '5747', nome: 'PACOCA DE AMENDOIM AMOR 18G' },
+    { codigo: '4702', nome: 'PACOCA ROLHAO DE AMENDOIN 50G' },
+    { codigo: '1831', nome: 'PACOQUITA' },
+    { codigo: '5984', nome: 'PAÇOQUINHA KLAIN' },
+    { codigo: '5136', nome: 'PIPOCA DOCE KLAIN 120G' },
+    { codigo: '5850', nome: 'PIPOCA DOCE KLAIN SABORES' },
+    { codigo: '2399', nome: 'PIPOCA KEVITOS 100 G' },
+    { codigo: '1398', nome: 'PIPOCA KEVITOS 50G' },
+    { codigo: '5273', nome: 'PIPOCA KEVITOS CHOC 35G' },
+    { codigo: '2421', nome: 'PIPOCA MICROONDAS MANTEIGA 100G' },
+    { codigo: '2792', nome: 'RAPADURA BATISTA 50G' },
+    { codigo: '5697', nome: 'SAGU ROCHA 400G' },
+    { codigo: '168', nome: 'SAL FINO 1KG' },
+    { codigo: '204', nome: 'SAL GROSSO 1K' },
+    { codigo: '3307', nome: 'SAL GROSSO TEMPERADO 1KG' },
+    { codigo: '1058', nome: 'SARDINHA EM OLEO 125G' },
+    { codigo: '4780', nome: 'TABLETAO DE AMENDOIM CHOC 30G' },
+    { codigo: '5830', nome: 'TEMPERO PRA CHURRASCO NATTUSUL 500G' },
+    { codigo: '5831', nome: 'TEMPERO PRA GALETO 500G' },
+    { codigo: '205', nome: 'VINAGRE PRINZ 750ML' },
+    { codigo: '4983', nome: 'AMENDOIM  YOKI SALGADO DESC.150G' },
+    { codigo: '5765', nome: 'AMENDOIM CROCANTE SABOR DO CHEF 150G' },
+    { codigo: '4982', nome: 'AMENDOIM JAPONES YOKI  150G' },
+    { codigo: '4121', nome: 'AMENDOIM PETTIZ CROCANTE  CEB./SALSA 120G' },
+    { codigo: '4122', nome: 'AMENDOIM PETTIZ CROCANTE PIM/VERM 120G' },
+    { codigo: '5745', nome: 'AMENDOIM PETTIZ NATURAL CROCANTE 120G' },
+    { codigo: '5280', nome: 'BAT PRINGLES CHEDDAR E BACON 105G' },
+    { codigo: '5598', nome: 'BAT PRINGLES CHURRASCO 109G' },
+    { codigo: '4007', nome: 'BAT PRINGLES CREME E CEBOLA 109G' },
+    { codigo: '5599', nome: 'BAT PRINGLES LEMON PEPPER 105G' },
+    { codigo: '5629', nome: 'BAT PRINGLES MOSTARDA E MEL 158G' },
+    { codigo: '3990', nome: 'BAT PRINGLES ORIGINAL 104G' },
+    { codigo: '5758', nome: 'BAT PRINGLES ORIGINAL 149G' },
+    { codigo: '3991', nome: 'BAT PRINGLES ORIGINAL 35G' },
+    { codigo: '5759', nome: 'BAT PRINGLES PIZZA DE CALABRESA 105G' },
+    { codigo: '5760', nome: 'BAT PRINGLES PIZZA MARGUERITA 105G' },
+    { codigo: '5761', nome: 'BAT PRINGLES PIZZA PORTUGUESA 105G' },
+    { codigo: '4006', nome: 'BAT PRINGLES QUEIJO 109G' },
+    { codigo: '6016', nome: 'BAT PRINGLES RANCH FRESH 141G' },
+    { codigo: '6017', nome: 'BAT PRINGLES RIBS HOT 141GR' },
+    { codigo: '4456', nome: 'BATATA DEUTSCHIPS PAO DE ALHO 100G' },
+    { codigo: '4307', nome: 'BATATA WHAU COSTELA NA BRASA 50G' },
+    { codigo: '4308', nome: 'BATATA WHAU ORIGINAL 50G' },
+    { codigo: '4961', nome: 'CRI CRI MAIS 51G' },
+    { codigo: '3951', nome: 'ELMA AMENDOIM JAPONES 145G' },
+    { codigo: '501', nome: 'ELMA AMENDOIM JAPONES 45G' },
+    { codigo: '4057', nome: 'ELMA AMENDOIM OVINHO 145G' },
+    { codigo: '502', nome: 'ELMA AMENDOIM SEM PELE  100G' },
+    { codigo: '5085', nome: 'ELMA BACONZITOS 34G' },
+    { codigo: '1821', nome: 'ELMA BACONZITOS 86G' },
+    { codigo: '4554', nome: 'ELMA BATATA PALHA 100G' },
+    { codigo: '4246', nome: 'ELMA BATATA PALHA EXTRA FINA' },
+    { codigo: '508', nome: 'ELMA CEBOLITOS 36G' },
+    { codigo: '5083', nome: 'ELMA CEBOLITOS 91G' },
+    { codigo: '5952', nome: 'ELMA CHE' },
+    { codigo: '1982', nome: 'ELMA CHE BOLA QUEIJO SUICO 59G' },
+    { codigo: '4784', nome: 'ELMA CHE CRUNCHY SUPER  48G' },
+    { codigo: '4783', nome: 'ELMA CHE CRUNCHY WHITE CHEDDER 48G' },
+    { codigo: '510', nome: 'ELMA CHE LUA PARMESAO 40G' },
+    { codigo: '5509', nome: 'ELMA CHE LUA PARMESAO 95G' },
+    { codigo: '1974', nome: 'ELMA CHE MIX 41G' },
+    { codigo: '5082', nome: 'ELMA CHE MIX 82 G' },
+    { codigo: '3563', nome: 'ELMA CHE ONDA REQUEIJAO 45G' },
+    { codigo: '511', nome: 'ELMA CHE QUEIJO SUICO 37G' },
+    { codigo: '5079', nome: 'ELMA CHE REQUEIJAO 105 G' },
+    { codigo: '5124', nome: 'ELMA DOR DINAMITA 60G' },
+    { codigo: '5543', nome: 'ELMA DOR KETCHUP 110G' },
+    { codigo: '5636', nome: 'ELMA DOR KETCHUP 37G' },
+    { codigo: '2271', nome: 'ELMA DOR PIMENTA FORTE  55G' },
+    { codigo: '5123', nome: 'ELMA DOR PIMENTA MEXICANA 60G' },
+    { codigo: '4240', nome: 'ELMA DOR PIZZA 48G' },
+    { codigo: '1961', nome: 'ELMA DOR QUEIJO 120G' },
+    { codigo: '516', nome: 'ELMA DOR QUEIJO 210G' },
+    { codigo: '2018', nome: 'ELMA DOR QUEIJO 37G' },
+    { codigo: '4014', nome: 'ELMA DOR QUEIJO 75G' },
+    { codigo: '518', nome: 'ELMA DOR SWEET CHILLI 37G' },
+    { codigo: '1871', nome: 'ELMA DORITOS MOSTARDA 110G' },
+    { codigo: '519', nome: 'ELMA EQUILIBRI PRESUNTO  40G' },
+    { codigo: '2077', nome: 'ELMA EQUILIBRI QUEIJO 40G' },
+    { codigo: '1143', nome: 'ELMA EQUILIBRI SABOR TOMATE 40G' },
+    { codigo: '5080', nome: 'ELMA FAN PRESUNTO 105G' },
+    { codigo: '3562', nome: 'ELMA FAN PRESUNTO 37 G' },
+    { codigo: '3212', nome: 'ELMA FAN QUEIJO 105G' },
+    { codigo: '3065', nome: 'ELMA FAN QUEIJO 37G' },
+    { codigo: '3981', nome: 'ELMA LAYS CLASSICA 35G' },
+    { codigo: '1818', nome: 'ELMA LAYS CLASSICA 70G' },
+    { codigo: '2973', nome: 'ELMA LAYS CLASSICA 70G' },
+    { codigo: '5538', nome: 'ELMA LAYS RUSTICAS SAL MARINHO 38G' },
+    { codigo: '2882', nome: 'ELMA LAYS SOUR CREAM 70G' },
+    { codigo: '3778', nome: 'ELMA OVINHOS DE AMENDOIM 65G' },
+    { codigo: '5059', nome: 'ELMA PINGO BACON 160G' },
+    { codigo: '1803', nome: 'ELMA PINGO BACON 30G' },
+    { codigo: '5086', nome: 'ELMA PINGO BACON 76G' },
+    { codigo: '5058', nome: 'ELMA PINGO PICANHA 120G' },
+    { codigo: '5087', nome: 'ELMA PINGO PICANHA 55G' },
+    { codigo: '5236', nome: 'ELMA POPCORNERS KETTLE CORNERS 57G' },
+    { codigo: '5237', nome: 'ELMA POPCORNERS SEA SALT 57G' },
+    { codigo: '5238', nome: 'ELMA POPCORNERS WHITE CHEDDAR 57G' },
+    { codigo: '529', nome: 'ELMA RUF CEBOLA E SALCA 32G' },
+    { codigo: '4283', nome: 'ELMA RUF CEBOLA E SALCA 76G' },
+    { codigo: '5967', nome: 'ELMA RUF CEBOLA E SALSA 68G' },
+    { codigo: '3604', nome: 'ELMA RUF CHURRASCO 32G' },
+    { codigo: '5968', nome: 'ELMA RUF CHURRASCO 68G' },
+    { codigo: '4268', nome: 'ELMA RUF CHURRASCO 76G' },
+    { codigo: '1807', nome: 'ELMA RUF ORIGINAL 115G' },
+    { codigo: '1792', nome: 'ELMA RUF ORIGINAL 32G' },
+    { codigo: '5088', nome: 'ELMA RUF ORIGINAL 32G' },
+    { codigo: '5966', nome: 'ELMA RUF ORIGINAL 68G' },
+    { codigo: '535', nome: 'ELMA RUF ORIGINAL 75G' },
+    { codigo: '5510', nome: 'ELMA RUF ORIGINAL 76G' },
+    { codigo: '5163', nome: 'ELMA RUF OUTBACK RIBS 30G' },
+    { codigo: '5199', nome: 'ELMA RUF OUTBACK RIBS 65G' },
+    { codigo: '5139', nome: 'ELMA RUF TUBO ORIGINAL 100G' },
+    { codigo: '5138', nome: 'ELMA RUF TUBO SOUR CREAM 100G' },
+    { codigo: '538', nome: 'ELMA SEN FRANGO GRELHADO 40G' },
+    { codigo: '539', nome: 'ELMA SEN PEITO PERU 40G' },
+    { codigo: '5060', nome: 'ELMA STIKSY 160G' },
+    { codigo: '540', nome: 'ELMA STIKSY 48G' },
+    { codigo: '5097', nome: 'ELMA STIKSY 76G' },
+    { codigo: '3813', nome: 'ELMA TORCIDA BACON 38G' },
+    { codigo: '4358', nome: 'ELMA TORCIDA CAMARAO C/ PIMENTA 38G' },
+    { codigo: '541', nome: 'ELMA TORCIDA CEBOLA 35 GR' },
+    { codigo: '5504', nome: 'ELMA TORCida CHURRASCO 35G' },
+    { codigo: '3547', nome: 'ELMA TORCIDA COSTELINHA E LIMAO 35GG' },
+    { codigo: '4166', nome: 'ELMA TORCIDA PAO DE ALHO 35G' },
+    { codigo: '863', nome: 'ELMA TORCIDA PIMENTA MEXICANA 35G' },
+    { codigo: '5137', nome: 'ELMA TORCIDA PROMO 35G' },
+    { codigo: '1254', nome: 'ELMA TORCIDA QUEIJO 38G' },
+    { codigo: '4295', nome: 'ELMA TORCIDA VINAGRETE 35G' },
+    { codigo: '5239', nome: 'ELMA TOSTITOS 110G' },
+    { codigo: '5568', nome: 'ELMA TOTITOS PIM MEX 110G' },
+    { codigo: '4327', nome: 'SALG SENSE PRESUNTO DEFUMADO 80G' },
+    { codigo: '4324', nome: 'SALG SENSE QUEIJO PARMMESAO 80G' },
+    { codigo: '5847', nome: 'SALG YOKITOS' },
+    { codigo: '4928', nome: 'SALG YOKITOS ANEL DE CEBOLA 153G' },
+    { codigo: '5050', nome: 'SALG YOKITOS BAT CEBOLA SALSA 90G' },
+    { codigo: '5049', nome: 'SALG YOKITOS BAT COM SAL 90G' },
+    { codigo: '5846', nome: 'SALG YOKITOS BAT LISA CLASSICA 45G' },
+    { codigo: '5845', nome: 'SALG YOKITOS BAT ONDULADA CEBOLA E SALSA 45G' },
+    { codigo: '5844', nome: 'SALG YOKITOS BAT ONDULADA CHURRASCO 45G' },
+    { codigo: '3975', nome: 'SALG YOKITOS BAT ONDULADA ORIGINAL 45G' },
+    { codigo: '4930', nome: 'SALG YOKITOS CONCHINHA SABOR PRESUNTO 153G' },
+    { codigo: '5851', nome: 'SALG YOKITOS CONCHINHA SABOR QUEIJO 135G' },
+    { codigo: '5969', nome: 'SALG YOKITOS LUA SABOR QUEIJO 135G' },
+    { codigo: '4929', nome: 'SALG YOKITOS REDINHA SABOR REQUEIJAO 135G' },
+    { codigo: '4737', nome: 'SALG. GULAO CEBOLA E SALCA 180G' },
+    { codigo: '4738', nome: 'SALG. GULAO CHURRASCO180G' },
+    { codigo: '4969', nome: 'SALG. GULAO PRESUNTO 180G' },
+    { codigo: '4832', nome: 'SALG. GULAO PURURUCA BACON 150G' },
+    { codigo: '4970', nome: 'SALG. GULAO REQUEIJAO 180G' },
+    { codigo: '5680', nome: 'SALG. GULOSSAURO BACON 100G' },
+    { codigo: '5679', nome: 'SALG. GULOSSAURO CEBOLA 100G' },
+    { codigo: '5681', nome: 'SALG. GULOSSAURO CHURRASCO 100G' },
+    { codigo: '5678', nome: 'SALG. GULOSSAURO PRESUNTO 100G' },
+    { codigo: '5682', nome: 'SALG. GULOSSAURO QUEIJO 100G' },
+    { codigo: '4954', nome: 'SALG. KIRO CEBOLA 100G' },
+    { codigo: '5551', nome: 'SALG. KIRO CHURRASCO 100G' },
+    { codigo: '5552', nome: 'SALG. KIRO PRESUNTO 100G' },
+    { codigo: '4915', nome: 'SALG. KIRO QUEIJO 100G' },
+    { codigo: '4953', nome: 'SALG. KIRO REQUEIJAO 100G' },
+    { codigo: '3793', nome: 'SALG. MAX CHURRASCO 45G' },
+    { codigo: '3805', nome: 'SALG. MAX PRESUNTO 45G' },
+    { codigo: '3794', nome: 'SALG. MAX QUEIJO 45G' },
+    { codigo: '5169', nome: 'SALG. SNACKS AMENDUPA BACON 140G' },
+    { codigo: '5205', nome: 'SALG. SNACKS AMENDUPA CEBOLA 140G' },
+    { codigo: '5167', nome: 'SALG. SNACKS AMENDUPA CHURRASCO 140G' },
+    { codigo: '5704', nome: 'SALG. SNACKS AMENDUPA CUSTELINHA SUINA 140G' },
+    { codigo: '5207', nome: 'SALG. SNACKS AMENDUPA PIZZA  140G' },
+    { codigo: '5170', nome: 'SALG. SNACKS AMENDUPA QUEIJO 140G' },
+    { codigo: '5876', nome: 'SALGADINHO BEIJA FLOR SABOR CEBOLA 120G' },
+    { codigo: '5877', nome: 'SALGADINHO BEIJA FLOR SABOR PICANHA 120G' },
+    { codigo: '5874', nome: 'SALGADINHO BEIJA FLOR SABOR PIZZA 120G' },
+    { codigo: '5878', nome: 'SALGADINHO BEIJA FLOR SABOR PRESUNTO 120G' },
+    { codigo: '5875', nome: 'SALGADINHO BEIJA FLOR SABOR PRESUNTO 130G' },
+    { codigo: '5873', nome: 'SALGADINHO BEIJA FLOR SABOR QUEIJO 120G' },
+    { codigo: '5774', nome: 'SALGADINHO CIA DA BATATA 200G' },
+    { codigo: '5773', nome: 'SALGADINHO ONION SABOR CEBOLA 200G' },
+    { codigo: '2783', nome: 'SALGADINHO SNACKS AMENDUPA CAL. 40G' },
+    { codigo: '2799', nome: 'SALGADINHO SNACKS AMENDUPA CHU. 40G' },
+    { codigo: '2787', nome: 'SALGADINHO SNACKS AMENDUPA COST.SUINA 40G' },
+    { codigo: '2785', nome: 'SALGADINHO SNACKS AMENDUPA PIM. MEX. 40G' },
+    { codigo: '2795', nome: 'SALGADINHO SNACKS AMENDUPA PIZZA 40G' },
+    { codigo: '2791', nome: 'SALGADINHO SNACKS AMENDUPA QUEIJO 40G' },
+    { codigo: '154', nome: 'AGUA  20LTS' },
+    { codigo: '4252', nome: 'AGUA ACQUACEL 20L' },
+    { codigo: '4', nome: 'AGUA BAMBA C/G 350 ML' },
+    { codigo: '1591', nome: 'AGUA CRYSTAL S/G 1,5 LT' },
+    { codigo: '5005', nome: 'AGUA CRYSTAL SABORES 510ML' },
+    { codigo: '4843', nome: 'AGUA DA PEDRA ABACAXI HORTELA 350ML' },
+    { codigo: '175', nome: 'AGUA DA PEDRA C/G 2L' },
+    { codigo: '172', nome: 'AGUA DA PEDRA C/G 500ML' },
+    { codigo: '4841', nome: 'AGUA DA PEDRA FRUTAS VERMELHAS 350 ML' },
+    { codigo: '176', nome: 'AGUA DA PEDRA S/G 1,5 LT' },
+    { codigo: '1919', nome: 'AGUA DA PEDRA S/G 1,5 LT' },
+    { codigo: '838', nome: 'AGUA DA PEDRA S/G 500ML' },
+    { codigo: '5615', nome: 'AGUA FONTE DA ILHA C/G 500 ML' },
+    { codigo: '1500', nome: 'AGUA FONTE DA ILHA S/G 500ML' },
+    { codigo: '1955', nome: 'CAFE EXPRESSO - LONGO' },
+    { codigo: '5550', nome: 'CERV AMSTEL LONG NEC 355ML' },
+    { codigo: '4235', nome: 'CERV AMSTEL LONG ULTRA 275ML' },
+    { codigo: '3427', nome: 'CERV AMSTEL PURO MALTE 473ML' },
+    { codigo: '5627', nome: 'CERV AMSTEL VIBES FRUIT PUNCH' },
+    { codigo: '834', nome: 'CERV ANTARTICA 473ML' },
+    { codigo: '2426', nome: 'CERV BELLA VISTA LAGER 473ML' },
+    { codigo: '2879', nome: 'CERV BRAHMA  DUPLO MALTE 350ML' },
+    { codigo: '3027', nome: 'CERV BRAHMA  DUPLO MALTE 473ML' },
+    { codigo: '5764', nome: 'CERV BRAHMA  DUPLO MALTE BLACK 350ML' },
+    { codigo: '1120', nome: 'CERV BRAHMA 473ML' },
+    { codigo: '1075', nome: 'CERV BRAHMA 600ML' },
+    { codigo: '2279', nome: 'CERV BRAHMA MALZEBIER 350 ML' },
+    { codigo: '4302', nome: 'CERV BUD LONG NECK 0,0% 330ML' },
+    { codigo: '4297', nome: 'CERV BUDWEISER 0,O% 350ML' },
+    { codigo: '2637', nome: 'CERV BUDWEISER 350ML' },
+    { codigo: '2831', nome: 'CERV BUDWEISER 473ML' },
+    { codigo: '920', nome: 'CERV BUDWEISER LONG NECK 330ML' },
+    { codigo: '2291', nome: 'CERV CORONA EXTRA LONG NECK 355ML' },
+    { codigo: '5695', nome: 'CERV CORONA LATA 350 ML' },
+    { codigo: '5056', nome: 'CERV CORONA LATAO 473 ML' },
+    { codigo: '5305', nome: 'CERV CORONA ZERO LONG NECK 330ML' },
+    { codigo: '4216', nome: 'CERV CRISTAL PILSEN 350 ML' },
+    { codigo: '2345', nome: 'CERV EISENBAHN LONG NECK 355ML' },
+    { codigo: '5900', nome: 'CERV HEILIGE PILSEN 473ML' },
+    { codigo: '5902', nome: 'CERV HEILIGE PILSEN LONG NEC 355ML' },
+    { codigo: '5901', nome: 'CERV HEILIGE RED ALE 473ML' },
+    { codigo: '6020', nome: 'CERV HEILIGE RED ALE 473ML (CLONE)' },
+    { codigo: '6021', nome: 'CERV HEILIGE RED ALE LONG NEC 355ML' },
+    { codigo: '3104', nome: 'CERV HEINEKEN  600ML C/ CASCO' },
+    { codigo: '4200', nome: 'CERV HEINEKEN 0.0 BEER 350 ML' },
+    { codigo: '3887', nome: 'CERV HEINEKEN 0.0 BEER LONG N  330ML' },
+    { codigo: '857', nome: 'CERV HEINEKEN 473ML' },
+    { codigo: '3432', nome: 'CERV HEINEKEN BARRIL 5L' },
+    { codigo: '4938', nome: 'CERV HEINEKEN LONG 250 ML' },
+    { codigo: '833', nome: 'CERV HEINEKEN LONG NEC 330ML' },
+    { codigo: '4196', nome: 'CERV IPA MARACUJA 350 ML' },
+    { codigo: '182', nome: 'CERV KAISER 350ML' },
+    { codigo: '829', nome: 'CERV KAISER 473ML' },
+    { codigo: '1076', nome: 'CERV KAISER 600ML' },
+    { codigo: '2003', nome: 'CERV MALTA ESCURA 473ML' },
+    { codigo: '2406', nome: 'CERV MALTA ESCURA S/ ALCOOL 473ML' },
+    { codigo: '183', nome: 'CERV MALZBIER 355ML' },
+    { codigo: '5907', nome: 'CERV ORIGINAL 350ML' },
+    { codigo: '4237', nome: 'CERV ORIGINAL 473 ML' },
+    { codigo: '3006', nome: 'CERV PLIER ZERO 473ML' },
+    { codigo: '923', nome: 'CERV POLAR 473ML' },
+    { codigo: '2', nome: 'CERV PRAYA LONG NEC 355 ML' },
+    { codigo: '5555', nome: 'CERV ROCKA AMERICAN LONG 350 ML' },
+    { codigo: '147', nome: 'CERV ROCKABILLY IPA ML' },
+    { codigo: '807', nome: 'CERV SKOL 473ML' },
+    { codigo: '1078', nome: 'CERV SKOL 600ML' },
+    { codigo: '4505', nome: 'CERV SKOL BEATS CAIPIRINHA LONG NEC 269ML' },
+    { codigo: '1899', nome: 'CERV SKOL BEATS GIN/TONICA 269ML' },
+    { codigo: '5625', nome: 'CERV SKOL BEATS GIN/TONICA LATA' },
+    { codigo: '4101', nome: 'CERV SKOL BEATS GT LONG NECK 269ML' },
+    { codigo: '5655', nome: 'CERV SKOL BEATS RED MIX LATA 369 ML' },
+    { codigo: '1389', nome: 'CERV SKOL BEATS SENSES 269 ML' },
+    { codigo: '3982', nome: 'CERV SKOL BEATS SENSES LONG NEC  269ML' },
+    { codigo: '5104', nome: 'CERV SKOL BEATS TROPICAL LONG NEC 269 ML' },
+    { codigo: '149', nome: 'CERV SOL 600ML' },
+    { codigo: '1', nome: 'CERV SOL LONG NEC ZERO 330ML' },
+    { codigo: '925', nome: 'CERV SOL LONG NECK 330ML' },
+    { codigo: '5522', nome: 'CERV SPATEN MUNICH 355ML' },
+    { codigo: '5338', nome: 'CERV SPATEN MUNICH 600 ML' },
+    { codigo: '5654', nome: 'CERV SPATEN MUNICH LONG NEC 330ML' },
+    { codigo: '2270', nome: 'CERV STELLA ARTOAIS LONG NEC 330ML' },
+    { codigo: '5659', nome: 'CERV STELLA ARTOIS 473 ML' },
+    { codigo: '835', nome: 'CERV ZERO BRAHMA LONG NECK' },
+    { codigo: '5600', nome: 'CHOPP BAHAMAS PILSEN 1,5LTS' },
+    { codigo: '6012', nome: 'GIN BUFALO 900 ML' },
+    { codigo: '5622', nome: 'AMARULA' },
+    { codigo: '5657', nome: 'BEL ICE SABORES 275 ML' },
+    { codigo: '5821', nome: 'CAMPARI GAR. VIDRO 748ML' },
+    { codigo: '5687', nome: 'CAMPARI NEGRONI 500ML' },
+    { codigo: '367', nome: 'CONHAQUE DREHER 900ML' },
+    { codigo: '6007', nome: 'COROTE MARKOFF BLUEBERRY 500ML' },
+    { codigo: '6008', nome: 'COROTE MARKOFF F.VERMELHAS 500 ML' },
+    { codigo: '5633', nome: 'GIN THEROS 1 LT' },
+    { codigo: '5257', nome: 'ICE MIKES VODKA E GUARAN 275 ML' },
+    { codigo: '5198', nome: 'ICE MIKES VODKA PITAIA 275 ML' },
+    { codigo: '5897', nome: 'JAGERMEISTER 710ML' },
+    { codigo: '1739', nome: 'KISLLA BIG APLLE 275ML' },
+    { codigo: '1733', nome: 'KISLLA BLUE 275ML' },
+    { codigo: '919', nome: 'KISLLA ICE 275ML' },
+    { codigo: '924', nome: 'KISLLA RED FRUITS 275ML' },
+    { codigo: '6', nome: 'PIRASSUNUNGA 51 GARRAFA VIDRO 965ML        13,4900' },
+    { codigo: '4941', nome: 'SANTO TRAGO BERG COLA 275ML' },
+    { codigo: '2938', nome: 'SCHEER PINA COLADA 900ML' },
+    { codigo: '5339', nome: 'SCHWEPPES MIXED VODKA 250 ML' },
+    { codigo: '6005', nome: 'VDK MARKOFF BLUEBERRY VIDRO 900 ML' },
+    { codigo: '6004', nome: 'VDK MARKOFF FRUTAS VERMELHAS VIDRO 900 ML' },
+    { codigo: '6006', nome: 'VDK MARKOFF LEMOS 900 ML' },
+    { codigo: '6003', nome: 'VDK MARKOFF MAÇA VERDE 900 ML' },
+    { codigo: '3525', nome: 'VODKA EAGLE 900ML' },
+    { codigo: '5746', nome: 'VODKA STARKOF 900ML' },
+    { codigo: '5767', nome: 'WHISKEY JACK DANIELS 1L' },
+    { codigo: '5781', nome: 'WHISKY BLACK E WHITE ORANGE 700 ML' },
+    { codigo: '5153', nome: 'WHISKY DRURYS 900 ML' },
+    { codigo: '5766', nome: 'WHISKY JAK DANIELS APPLE 1L' },
+    { codigo: '4583', nome: 'WHISKY JOHNNIE WALKER 750 ML' },
+    { codigo: '4943', nome: 'WHISKY MAORI GOLD 1 LT' },
+    { codigo: '4103', nome: 'WHISKY NATU NOBILIS 1L' },
+    { codigo: '1395', nome: 'WHISKY OLD EIGHT 900ML' },
+    { codigo: '2902', nome: 'ENERG BALY CHAMPANHE 250ML' },
+    { codigo: '4955', nome: 'ENERGETICO BALY ABACAXI HORTEL 2L' },
+    { codigo: '1825', nome: 'ENERGETICO BALY ABACAXI HORTEL 473 ML' },
+    { codigo: '4043', nome: 'ENERGETICO BALY ACAI 473' },
+    { codigo: '5200', nome: 'ENERGETICO BALY CEREJA 473 ML' },
+    { codigo: '5739', nome: 'ENERGETICO BALY CHA-MATE C/LIMAO 473ML' },
+    { codigo: '4294', nome: 'ENERGETICO BALY CITRUS LIMAO473' },
+    { codigo: '4054', nome: 'ENERGETICO BALY COCO E ACAI 2L' },
+    { codigo: '4044', nome: 'ENERGETICO BALY COCO E ACAI 473' },
+    { codigo: '4110', nome: 'ENERGETICO BALY LOKO 473' },
+    { codigo: '4075', nome: 'ENERGETICO BALY MACA VERDE 473' },
+    { codigo: '4078', nome: 'ENERGETICO BALY MELANCIA 473' },
+    { codigo: '4213', nome: 'ENERGETICO BALY MOR 473 ML' },
+    { codigo: '4236', nome: 'ENERGETICO BALY MOR E PESSEGO 473' },
+    { codigo: '3058', nome: 'ENERGETICO BALY MORANGO E PESSEGO 2L' },
+    { codigo: '4074', nome: 'ENERGETICO BALY PITAYA 473' },
+    { codigo: '4041', nome: 'ENERGETICO BALY SUGARFREE 473' },
+    { codigo: '4261', nome: 'ENERGETICO BALY TANGERINA 473' },
+    { codigo: '2941', nome: 'ENERGETICO BALY TRADICIONAL 2L' },
+    { codigo: '4042', nome: 'ENERGETICO BALY TRADICIONAL 473' },
+    { codigo: '3043', nome: 'ENERGETICO BALY TROPICAL 2L' },
+    { codigo: '4055', nome: 'ENERGETICO BALY TROPICAL 473' },
+    { codigo: '5001', nome: 'ENERGETICO ELEV  2LTS' },
+    { codigo: '4739', nome: 'ENERGETICO ELEV COCO/ACAI 473ML' },
+    { codigo: '4330', nome: 'ENERGETICO ELEV FRUTAS TROPICAIS 473ML' },
+    { codigo: '4322', nome: 'ENERGETICO ELEV GUARANA/MARACUJA 473ML' },
+    { codigo: '4331', nome: 'ENERGETICO ELEV MACA VERDE 473ML' },
+    { codigo: '5308', nome: 'ENERGETICO ELEV MORANGO/MELANCIA 473ML' },
+    { codigo: '4321', nome: 'ENERGETICO ELEV ORIGINAL 473ML' },
+    { codigo: '4215', nome: 'ENERGETICO ELEV ZERO ACUCAR 473ML' },
+    { codigo: '5295', nome: 'ENERGETICO HIPER  ACAI 2 LTS' },
+    { codigo: '5762', nome: 'ENERGETICO HIPER MACA VERDE 2LTS' },
+    { codigo: '5288', nome: 'ENERGETICO HIPER MACA VERDE 473 ML' },
+    { codigo: '5294', nome: 'ENERGETICO HIPER MOR AMORA 2 LTS' },
+    { codigo: '5292', nome: 'ENERGETICO HIPER ORIGINAL 2 LTS' },
+    { codigo: '5289', nome: 'ENERGETICO HIPER ORIGINAL 473 ML' },
+    { codigo: '5287', nome: 'ENERGETICO HIPER TROPICAL 473 ML' },
+    { codigo: '5763', nome: 'ENERGETICO HIPER ZERO ACUCAR 2LTS' },
+    { codigo: '1256', nome: 'ENERGETICO MONSTER 473ML' },
+    { codigo: '3890', nome: 'ENERGETICO MONSTER ABSOLUTY ZERO 473ML' },
+    { codigo: '3838', nome: 'ENERGETICO MONSTER DRAGON ICE 473ML' },
+    { codigo: '4296', nome: 'ENERGETICO MONSTER GRAGON ICE TEA 473ML' },
+    { codigo: '4571', nome: 'ENERGETICO MONSTER KHAOTIC 473ML' },
+    { codigo: '3698', nome: 'ENERGETICO MONSTER MANGO LOCO 4738' },
+    { codigo: '979', nome: 'ENERGETICO MONSTER ORIGINAL 473ML' },
+    { codigo: '4403', nome: 'ENERGETICO MONSTER PACIFIC PUNCH 473ML' },
+    { codigo: '133', nome: 'ENERGETICO MONSTER PEACHY KEEN PESSEGO 473 ML' },
+    { codigo: '4795', nome: 'ENERGETICO MONSTER PIPELINE 473ML' },
+    { codigo: '3677', nome: 'ENERGETICO MONSTER ULTRA 473' },
+    { codigo: '5949', nome: 'ENERGETICO MONSTER ULTRA FIESTA MANGO 473ML' },
+    { codigo: '3680', nome: 'ENERGETICO MONSTER ULTRA VIOLET 473ML' },
+    { codigo: '4373', nome: 'ENERGETICO MONSTER WATERMELON 473ML' },
+    { codigo: '3978', nome: 'ENERGETICO RED HORSE 2L' },
+    { codigo: '1869', nome: 'ENERGETICO RESSALIV 269ML' },
+    { codigo: '4591', nome: 'ENERGETICO SAFADAO DRINK 2LT' },
+    { codigo: '1602', nome: 'FRUKI CITRUS 350ML' },
+    { codigo: '1116', nome: 'FRUKITO  SABOR UVA 500ML' },
+    { codigo: '476', nome: 'FRUKITO FRUTAS CITRICAS 500ML' },
+    { codigo: '477', nome: 'FRUKITO FRUTAS VERMELHAS 500ML' },
+    { codigo: '821', nome: 'GAT CITRICAS 500ML' },
+    { codigo: '4952', nome: 'GAT FRUTAS SILVESTRES 350 ML' },
+    { codigo: '562', nome: 'GAT LARANJA 500ML' },
+    { codigo: '4951', nome: 'GAT LARANJA E LIMA 350 ML' },
+    { codigo: '1147', nome: 'GAT LIMAO 500ML' },
+    { codigo: '1504', nome: 'GAT MARACUJA 500ML' },
+    { codigo: '563', nome: 'GAT MOR MARACUJA 500ML' },
+    { codigo: '3021', nome: 'GAT MORANGO- MELANCIA 500ML' },
+    { codigo: '4818', nome: 'GAT SABOR BERRY BLU 500 ML' },
+    { codigo: '1124', nome: 'GAT TANGERINA 500ML' },
+    { codigo: '1701', nome: 'GAT UVA 500ML' },
+    { codigo: '2939', nome: 'GAT UVA 500ML' },
+    { codigo: '5514', nome: 'RED BUL TROPICAL 250ML' },
+    { codigo: '326', nome: 'RED BULL 250ML' },
+    { codigo: '327', nome: 'RED BULL 355ML' },
+    { codigo: '1127', nome: 'RED BULL 473ML' },
+    { codigo: '4099', nome: 'RED BULL ACAI COCO 250ML' },
+    { codigo: '4619', nome: 'RED BULL FRUTAS SILVESTRES 250ML' },
+    { codigo: '5328', nome: 'RED BULL FRUTAS VERMELHAS 250ML' },
+    { codigo: '5656', nome: 'RED BULL MARACUJA E MELAO 250ML' },
+    { codigo: '4202', nome: 'RED BULL MELANCIA 250ML' },
+    { codigo: '4286', nome: 'RED BULL MOR E PESSEGO 250ML' },
+    { codigo: '5166', nome: 'RED BULL PERA CANELA 250ML' },
+    { codigo: '4287', nome: 'RED BULL PITAYA 250 ML' },
+    { codigo: '5905', nome: 'RED BULL POMELO 250ML' },
+    { codigo: '4618', nome: 'RED BULL SEM ACUCAR 250ML' },
+    { codigo: '1940', nome: 'RED BULL SEM ACUCAR 355ML' },
+    { codigo: '5962', nome: 'RED BULL TROPICAL 473ML' },
+    { codigo: '4317', nome: 'REF POWER ADE FRUTAS TROPICAIS 500ML' },
+    { codigo: '2170', nome: 'REF POWER ADE LIMAO 500ML' },
+    { codigo: '1888', nome: 'REF POWER ADE MIX 500ML' },
+    { codigo: '1885', nome: 'REF POWER ADE UVA 500ML' },
+    { codigo: '5564', nome: 'RESSALIV TANGERINA 236ML' },
+    { codigo: '331', nome: 'GELO 1KG' },
+    { codigo: '330', nome: 'GELO 3KG' },
+    { codigo: '5608', nome: 'GELO 5KG' },
+    { codigo: '4977', nome: 'GELO SABORISADO' },
+    { codigo: '5985', nome: 'FANTA UVA 600ML' },
+    { codigo: '3008', nome: 'REF ANTARTICA GUARANA 200ML' },
+    { codigo: '766', nome: 'REF ANTARTICA GUARANA 2L' },
+    { codigo: '768', nome: 'REF ANTARTICA GUARANA 350ML' },
+    { codigo: '1874', nome: 'REF ANTARTICA GUARANA 600ML' },
+    { codigo: '5841', nome: 'REF ANTARTICA GUARANA ZERO 2L' },
+    { codigo: '2233', nome: 'REF ANTARTICA GUARANA ZERO 350ML' },
+    { codigo: '855', nome: 'REF AQUARIUS FRESH LIMAO 510ML' },
+    { codigo: '261', nome: 'REF CELINA LARANJA 240ML' },
+    { codigo: '6009', nome: 'REF COCA COLA 1,5 LTS' },
+    { codigo: '5264', nome: 'REF COCA COLA 2,225 LTS' },
+    { codigo: '266', nome: 'REF COCA COLA 220ML' },
+    { codigo: '253', nome: 'REF COCA COLA 2L' },
+    { codigo: '3954', nome: 'REF COCA COLA 310ML' },
+    { codigo: '478', nome: 'REF COCA COLA 350ML' },
+    { codigo: '257', nome: 'REF COCA COLA 600ML' },
+    { codigo: '2460', nome: 'REF COCA COLA CAFE 220ML' },
+    { codigo: '1584', nome: 'REF COCA COLA ZERO  2LT' },
+    { codigo: '3920', nome: 'REF COCA COLA ZERO 220ML' },
+    { codigo: '479', nome: 'REF COCA COLA ZERO 350ML' },
+    { codigo: '1292', nome: 'REF COCA COLA ZERO 600ML' },
+    { codigo: '254', nome: 'REF FANTA LARANJA 2L' },
+    { codigo: '480', nome: 'REF FANTA LARANJA 350ML' },
+    { codigo: '258', nome: 'REF FANTA LARANJA 600ML' },
+    { codigo: '4691', nome: 'REF FANTA MISTERIO 350ML' },
+    { codigo: '4742', nome: 'REF FANTA UVA 220 ML' },
+    { codigo: '481', nome: 'REF FANTA UVA 350ML' },
+    { codigo: '267', nome: 'REF FRUKI COLA 2L' },
+    { codigo: '472', nome: 'REF FRUKI COLA 350ML' },
+    { codigo: '470', nome: 'REF FRUKI COLA 600ML' },
+    { codigo: '1877', nome: 'REF FRUKI GUARANA  ZERO 600ML' },
+    { codigo: '268', nome: 'REF FRUKI GUARANA 2LT' },
+    { codigo: '473', nome: 'REF FRUKI GUARANA 350ML' },
+    { codigo: '471', nome: 'REF FRUKI GUARANA 600ML' },
+    { codigo: '4936', nome: 'REF FRUKI GUARANA ZERO 2 LTS' },
+    { codigo: '1872', nome: 'REF FRUKI GUARANA ZERO 350ML' },
+    { codigo: '269', nome: 'REF FRUKI LARANJA 2L' },
+    { codigo: '930', nome: 'REF FRUKI LARANJA 600ML' },
+    { codigo: '468', nome: 'REF FRUKI LIMAO 2L' },
+    { codigo: '475', nome: 'REF FRUKI LIMAO 350ML' },
+    { codigo: '1378', nome: 'REF FRUKI LIMAO 600ML' },
+    { codigo: '469', nome: 'REF FRUKI UVA 600 ML' },
+    { codigo: '1570', nome: 'REF FYS 350ML' },
+    { codigo: '5580', nome: 'REF GUARANA CHARRUA 350 ML' },
+    { codigo: '5275', nome: 'REF H2O CITRUS 500ML' },
+    { codigo: '2160', nome: 'REF H2O LIMAO 1,5L' },
+    { codigo: '1475', nome: 'REF H2O LIMAO 500ML' },
+    { codigo: '174', nome: 'REF H2O LIMONETO 500ML' },
+    { codigo: '4464', nome: 'REF ITUBAINA LONG NEC 355 ML' },
+    { codigo: '3023', nome: 'REF PEPSI  2,5L' },
+    { codigo: '5836', nome: 'REF PEPSI  600ML' },
+    { codigo: '1876', nome: 'REF PEPSI  TWIST 600ML' },
+    { codigo: '3007', nome: 'REF PEPSI 200ML' },
+    { codigo: '1225', nome: 'REF PEPSI 2L' },
+    { codigo: '1859', nome: 'REF PEPSI 350ML' },
+    { codigo: '5824', nome: 'REF PEPSI BLACK ZERO 600ML' },
+    { codigo: '1862', nome: 'REF PEPSI TWIST 350ML' },
+    { codigo: '3050', nome: 'REF PEPSI ZERO 2L' },
+    { codigo: '1865', nome: 'REF PEPSI ZERO 350ML' },
+    { codigo: '484', nome: 'REF SCHWEPPES CITRUS 350ML' },
+    { codigo: '5301', nome: 'REF SCHWEPPES CITRUS KS 250ML' },
+    { codigo: '5906', nome: 'REF SODA LIMONADA ANTARTICA 350ML' },
+    { codigo: '256', nome: 'REF SPRITE 2L' },
+    { codigo: '483', nome: 'REF SPRITE 350ML' },
+    { codigo: '2236', nome: 'REF SUKITA LARANJA 2L' },
+    { codigo: '5482', nome: 'REF SUKITA LARANJA 350ML' },
+    { codigo: '5769', nome: 'REF SUKITA UVA 2L' },
+    { codigo: '5670', nome: 'REF SUKITA UVA 350 ML' },
+    { codigo: '173', nome: 'AGUA DE COCO KERO COCO 200ML' },
+    { codigo: '2834', nome: 'AGUA DE COCO KERO COCO 330ML' },
+    { codigo: '5634', nome: 'BALY KIDS MELANCIA 220 ML' },
+    { codigo: '4291', nome: 'BALY KIDS TUTI FRUTI 220 ML' },
+    { codigo: '4292', nome: 'BALY KIDS UVA 220 ML' },
+    { codigo: '974', nome: 'CHA GELADO LEAO LIMAO' },
+    { codigo: '1305', nome: 'SUCO DEL VALE CITRUS 450ML' },
+    { codigo: '5084', nome: 'SUCO DEL VALE FRUTAS CITRICAS 1,5LTS' },
+    { codigo: '5835', nome: 'SUCO DEL VALE GOIABA LT SEM ACUCAR 290ML' },
+    { codigo: '2158', nome: 'SUCO DEL VALE KAPO LARANJA 200ML' },
+    { codigo: '1137', nome: 'SUCO DEL VALE LARANJA 450ML' },
+    { codigo: '5813', nome: 'SUCO DEL VALE MANGA LATA 290ML' },
+    { codigo: '4306', nome: 'SUCO DEL VALE MARACUJA LATA 290 ML' },
+    { codigo: '564', nome: 'SUCO DEL VALE PESSEGO LATA 290 ML' },
+    { codigo: '5601', nome: 'SUCO DEL VALE UVA 1,5LTS' },
+    { codigo: '1242', nome: 'SUCO DEL VALE UVA 450ML' },
+    { codigo: '565', nome: 'SUCO DEL VALE UVA LATA 290ML' },
+    { codigo: '4140', nome: 'SUCO HUGO PIETRO PRATS UVA 300ML' },
+    { codigo: '5976', nome: 'SUCO MID SABORES 20G' },
+    { codigo: '5975', nome: 'SUCO MID ZERO 10G' },
+    { codigo: '570', nome: 'SUCO TANG ABACAXI 30G' },
+    { codigo: '567', nome: 'SUCO TANG LARANJA 38G' },
+    { codigo: '572', nome: 'SUCO TANG LIMAO 30G' },
+    { codigo: '1565', nome: 'SUCO TANG MARACUJA 30G' },
+    { codigo: '1772', nome: 'SUCO TANG MORANGO 30G' },
+    { codigo: '575', nome: 'SUCO TANG UVA 30G' },
+    { codigo: '5582', nome: 'SUCO TIKITO ABACAXI C/HORTELA 450ML' },
+    { codigo: '4845', nome: 'SUCO TIKITO LARANJA 450ML' },
+    { codigo: '5581', nome: 'SUCO TIKITO LIMONADA 450ML' },
+    { codigo: '5940', nome: 'SUCO TIKITO MARACUJA 450ML' },
+    { codigo: '4849', nome: 'SUCO TIKITO MORANGO 450 ML' },
+    { codigo: '5589', nome: 'SUCO TIKITO PESSEGO 450ML' },
+    { codigo: '4846', nome: 'SUCO TIKITO UVA 450 ML' },
+    { codigo: '5816', nome: 'SUCO TRINK LARANJA 15G' },
+    { codigo: '5817', nome: 'SUCO TRINK UVA 15G' },
+    { codigo: '5638', nome: 'ESPUMANTE MIORANZA 750 ML' },
+    { codigo: '4470', nome: 'VINHO BRANCO SECO BARTOLO 750 ML' },
+    { codigo: '6011', nome: 'VINHO CHALISE TINTO SECO 750 ML' },
+    { codigo: '6010', nome: 'VINHO CHALISE TINTO SUAVE 750 ML' },
+    { codigo: '4816', nome: 'VINHO COSTA REAL 750 ML' },
+    { codigo: '2954', nome: 'VINHO DEL PRADO BRAN ME.NIAGRA SUAVE 1,5L' },
+    { codigo: '2560', nome: 'VINHO DEL PRADO COOLER DE PESSEGO PET 1,45 LT' },
+    { codigo: '2950', nome: 'VINHO DEL PRADO MESA TINTO/DEMI SECO 750ML' },
+    { codigo: '2264', nome: 'VINHO DEL PRADO TINTO DEMI SEC1,5L' },
+    { codigo: '1997', nome: 'VINHO DEL PRADO TINTO SECO 750ML' },
+    { codigo: '2001', nome: 'VINHO DEL PRADO TINTO SECO PET 1,45L' },
+    { codigo: '1350', nome: 'VINHO DEL PRADO TINTO SUAVE 1,45L' },
+    { codigo: '2750', nome: 'VINHO DEL PRADO TINTO SUAVE 1,90L' },
+    { codigo: '1994', nome: 'VINHO DEL PRADO TINTO SUAVE 750ML' },
+    { codigo: '5954', nome: 'VINHO MIORANZA TINTO SUAVE 750ML' },
+    { codigo: '4471', nome: 'VINHO PERGOLA BRANCO SUAVE 750ML' },
+    { codigo: '4477', nome: 'VINHO SANGUE DE BOI TINTO SECO 750 ML' },
+    { codigo: '4469', nome: 'VINHO TINTO SECO BARTOLO 750 ML' },
+    { codigo: '3825', nome: 'CHAVEIRO DIVERSOS UN' },
+    { codigo: '5809', nome: 'CHAVEIRO METAL NOME UN.' },
+    { codigo: '5823', nome: 'PILHA ALCALINA FIAT LUX AA C/2' },
+    { codigo: '5671', nome: 'PILHA ALCALINA FIAT LUX AAA C/2 (PALITO)' },
+    { codigo: '121', nome: 'CARTAO VIVO ONLINE' },
+    { codigo: '3297', nome: 'CHIP + RECARGA COMBO VIVO' },
+    { codigo: '900', nome: 'ISQUEIRO CRICKET GRANDE' },
+    { codigo: '1509', nome: 'ISQUEIRO CRICKET MINI' },
+    { codigo: '5497', nome: 'SHAMPOO MONANGE' },
+    { codigo: '849', nome: 'APARELHO BAR BIC 1 LAMINA' },
+    { codigo: '749', nome: 'APARELHO BAR COMFORT 3' },
+    { codigo: '1236', nome: 'PASTA DENTAL 70G' },
+    { codigo: '5853', nome: 'ABSORVENTES MILI SUAVE C/ABAS' },
+    { codigo: '2907', nome: 'PAPEL TOALHA MULTIUSO' },
+    { codigo: '1158', nome: 'AMACIANTE GIRANDO SOL CLASSIC 2L' },
+    { codigo: '842', nome: 'DETERGENTE 500ML' },
+    { codigo: '1056', nome: 'SABAO EM PO GIRANDO SOL 500G' },
+    { codigo: '1817', nome: 'ESCOVA  DENTAL COLGATE' },
+    { codigo: '206', nome: 'ESCOVA DENTAL UN' },
+    { codigo: '3166', nome: 'FIO DENTAL 50M' },
+    { codigo: '208', nome: 'PAPEL HIGIENICO 20MT' },
+    { codigo: '5744', nome: 'PRESERVATIVO OLLA 3 UNI' },
+    { codigo: '343', nome: 'PRESERVATIVO PRUDENCE' },
+    { codigo: '5417', nome: 'DESODORANTE AEROSOL' },
+    { codigo: '5742', nome: 'REPELENTE' },
+    { codigo: '1250', nome: 'SABONETE 90G' },
+    { codigo: '1756', nome: 'SABONETE LUX SUAV. DAS PETALAS 125G' },
+    { codigo: '5402', nome: 'SABONETE REXONA ANTIBACTERIAL FRESH 84G' },
+    { codigo: '1206', nome: 'SABONETE SORTIDOS' },
+    { codigo: '3826', nome: 'ADAPTADOR PARA ANTENA UN' },
+    { codigo: '5315', nome: 'ARMA LANCA DARDOS' },
+    { codigo: '5790', nome: 'BOLA CRISTAL SORTIDA' },
+    { codigo: '5794', nome: 'BOLA LUNAR ANTI-GRAVIDADE' },
+    { codigo: '5027', nome: 'BOLHA SABAO SORTIDA' },
+    { codigo: '3821', nome: 'BONE UN' },
+    { codigo: '5997', nome: 'BRINQ CAMINHAO PLASTICO' },
+    { codigo: '5792', nome: 'BRINQ. BINOCULOS PLASTICO' },
+    { codigo: '5316', nome: 'BRINQ. BOLA PULA PULA' },
+    { codigo: '4435', nome: 'BRINQ. BOLHA DE SABAO 60 ML' },
+    { codigo: '5318', nome: 'BRINQ. BONECA HEROINAS' },
+    { codigo: '4658', nome: 'BRINQ. CONFETE DINO' },
+    { codigo: '4606', nome: 'BRINQ. CONFETE PINTO' },
+    { codigo: '5793', nome: 'BRINQ. LUVA LANCADORA' },
+    { codigo: '5317', nome: 'BRINQ. MINI RATO' },
+    { codigo: '5791', nome: 'BRINQ. MORDIDA DO DINOSSAURO' },
+    { codigo: '5314', nome: 'BRINQ. PEIXE A CORDA UN' },
+    { codigo: '4304', nome: 'BRINQ. SKATE CANDY UN' },
+    { codigo: '4988', nome: 'CABO AUXILIAR CARREGO' },
+    { codigo: '5365', nome: 'CABO DE DADOS INOVA 2 MTS' },
+    { codigo: '5768', nome: 'CABO DE DADOS INOVA 200CM' },
+    { codigo: '3774', nome: 'CABO DE DADOS KIVE' },
+    { codigo: '5507', nome: 'CABO DE DADOS TIPO C' },
+    { codigo: '4997', nome: 'CABO IPHONE CARREGO' },
+    { codigo: '4987', nome: 'CABO LIGHTNING IPHONE 2M' },
+    { codigo: '5513', nome: 'CABO MICRO USB CABLE' },
+    { codigo: '4989', nome: 'CABO MICRO USB CARREGO' },
+    { codigo: '3537', nome: 'CABO PARA CARREGADOR IPHONE' },
+    { codigo: '4996', nome: 'CABO TIPO C CARREGO' },
+    { codigo: '4991', nome: 'CABO USB C CARREGO' },
+    { codigo: '5795', nome: 'CAMINHAO UTILITARIO PLASTICO' },
+    { codigo: '5711', nome: 'CANDY COELHO FUNNY 15G' },
+    { codigo: '4985', nome: 'CAREGADOR SMART CARREGO' },
+    { codigo: '3538', nome: 'CARREGADOR UN PAREDE' },
+    { codigo: '3602', nome: 'CARREGADOR USB/ TOMADA UN' },
+    { codigo: '4992', nome: 'CARREGADOR VEICULAR CARREGO' },
+    { codigo: '3560', nome: 'CARREGADOR VEICULAR UN' },
+    { codigo: '3265', nome: 'CONF. ROBO COM LUZ' },
+    { codigo: '5647', nome: 'CONF. ZEN TOYS AQUA MANIA' },
+    { codigo: '4852', nome: 'COPO SURPRESA CHAVES' },
+    { codigo: '4195', nome: 'FIGURINHAS COPA DO MUNDO 2022 PC C/5' },
+    { codigo: '3539', nome: 'FONE DE OUVIDO UN' },
+    { codigo: '4995', nome: 'FONE IPHONE CARREGO' },
+    { codigo: '4990', nome: 'FONE TIPO C CARREGO' },
+    { codigo: '5030', nome: 'IOIO SORTIDO' },
+    { codigo: '4574', nome: 'PENDRIVE MUSICAL' },
+    { codigo: '5796', nome: 'PET DOG STRETCH' },
+    { codigo: '3910', nome: 'POTE SLIME TRADICIONAL' },
+    { codigo: '4576', nome: 'SUPORTE DE CELULAR LE-015' },
+    { codigo: '3766', nome: 'SUPORTE PARA CELULAR COMPLETO UN' },
+    { codigo: '4993', nome: 'SUPORTE VEICULAR CARREGO' },
+    { codigo: '4540', nome: 'TAG SEM PARAR' },
+    { codigo: '3824', nome: 'CHAVEIRO UN. GRANDE' },
+    { codigo: '1227', nome: 'CARVAO 3KG' },
+    { codigo: '738', nome: 'CARVAO 4 KG' },
+    { codigo: '4521', nome: 'LENHA DE ACACIA 10KG' },
+    { codigo: '3439', nome: 'ARQUIVO MOVEL DELLOCOLOR CR.C/6 PASTAS SUSP.' },
+    { codigo: '5073', nome: 'BRACADEIRA PORTA CELULAR' },
+    { codigo: '3629', nome: 'BRINQ. CATAVENTO UN' },
+    { codigo: '5246', nome: 'BRINQ. EMBORRACHADO' },
+    { codigo: '5784', nome: 'BRINQ. FLAUTA UN' },
+    { codigo: '5783', nome: 'BRINQ. HELICOPTERO CATAVENTO UN' },
+    { codigo: '5023', nome: 'BRINQ. MINI CAMINHAO' },
+    { codigo: '5245', nome: 'BRINQ. PISTOLA PLASTICA TOP 10' },
+    { codigo: '5016', nome: 'BRINQ. POPIT ELETRICO' },
+    { codigo: '5062', nome: 'BRINQ. URSINHO C/ LUZ' },
+    { codigo: '5041', nome: 'CAMINHAO DE FERRO' },
+    { codigo: '5798', nome: 'CAMINHAO DE PLASTICO SORTIDO' },
+    { codigo: '5033', nome: 'CARRINHO BABY MANIA' },
+    { codigo: '5121', nome: 'CARRINHO BATE PULA' },
+    { codigo: '5019', nome: 'CARRO METAL PERSONALIZADO' },
+    { codigo: '5042', nome: 'CARRO METAL SORTIDO' },
+    { codigo: '4497', nome: 'CONF BRINQ CARAMUJO' },
+    { codigo: '4498', nome: 'CONF BRINQ CATAVENTO' },
+    { codigo: '4499', nome: 'CONF BRINQ HELICOPTERO' },
+    { codigo: '4500', nome: 'CONF BRINQ PEIXE' },
+    { codigo: '5244', nome: 'DINOSSAURO SORTIDO' },
+    { codigo: '5797', nome: 'FUSCA/KOMBI DE METAL SORTIDOS' },
+    { codigo: '3739', nome: 'HOTWHEELS' },
+    { codigo: '5017', nome: 'KIT CARTEIRA RELOGIO INFANTIL' },
+    { codigo: '5069', nome: 'KIT GARRAFA TERMICA INOX' },
+    { codigo: '5242', nome: 'MINI CAMIONETE DE METAL' },
+    { codigo: '5024', nome: 'MINI CARRO METAL SORTIDO' },
+    { codigo: '5074', nome: 'MINI GAME RETRO' },
+    { codigo: '5070', nome: 'PROTETOR SOLAR DE PARA BRISA' },
+    { codigo: '3', nome: 'USO CONSUMO' },
+    { codigo: '5736', nome: 'ESTALOS PEPPI' },
+    { codigo: '5941', nome: 'ISQUEIRO CLIPPER MAXI' },
+    { codigo: '2951', nome: 'ISQUEIRO CLIPPER MINI' },
+    { codigo: '3016', nome: 'ISQUEIRO MINI' },
+    { codigo: '779', nome: 'PILHA PANASONIC AA C/2' },
+    { codigo: '334', nome: 'PILHA PANASONIC ALCALINA AAA C/2' },
+    { codigo: '3899', nome: 'PILHA PANASONIC ALCALINA PREMIUM AA2' },
+    { codigo: '335', nome: 'PILHA PANASONIC GRANDE D C/2' },
+    { codigo: '2617', nome: 'PILHA PANASONIC GRANDE D C/24' },
+    { codigo: '5194', nome: 'PILHA PHILIPS AA 2X' },
+    { codigo: '5195', nome: 'PILHA PHILIPS AAA X 2' },
+    { codigo: '5770', nome: 'PILHA PHILIPS CR2032 X 1' },
+    { codigo: '5196', nome: 'PILHA PHILIPS DL 2032' },
+    { codigo: '2564', nome: 'PILHA RAYOVAC 3V CR2025' },
+    { codigo: '337', nome: 'PILHA RAYOVAC AA C/4' },
+    { codigo: '339', nome: 'PILHA RAYOVAC AAA C/4' },
+    { codigo: '336', nome: 'PILHA RAYOVAC ALCALINA  AA C' },
+    { codigo: '338', nome: 'PILHA RAYOVAC ALCALINA  AAA C/2' },
+    { codigo: '3692', nome: 'PILHA RAYOVAC CR 2016' },
+    { codigo: '2817', nome: 'PILHA RAYOVAC LITHIUM CR2032' },
+    { codigo: '5805', nome: 'PILHA ZINCO PHILIPS AA X40' },
+    { codigo: '5804', nome: 'PILHA ZINCO PHILIPS AAA X40' },
+    { codigo: '1034', nome: 'HAVAIANAS TOP BRASIL' }
+]);
+
+
+let produtosLubrificantes = loadDataFromLocalStorage('produtosLubrificantesData', [
+    { codigo: '3956', nome: 'ALICATE MULTIFUNCIONAL 11X1' },
+    { codigo: '3767', nome: 'CABO AUXILIAR UN' },
+    { codigo: '5068', nome: 'FONE DE OUVIDO S/ FIO' },
+    { codigo: '4994', nome: 'FONE P3 CARREGO' },
+    { codigo: '5896', nome: 'FONTE DE PAREDE' },
+    { codigo: '4575', nome: 'FONTE VEICULAR' },
+    { codigo: '4025', nome: 'PARAFUSO BORRACHA 12 UN' },
+    { codigo: '4026', nome: 'PARAFUSO BORRACHA 13 UN' },
+    { codigo: '4027', nome: 'PARAFUSO BORRACHA 14 UN' },
+    { codigo: '4028', nome: 'PARAFUSO BORRACHA 15 UN' },
+    { codigo: '4029', nome: 'PARAFUSO BORRACHA 16 UN' },
+    { codigo: '4030', nome: 'PARAFUSO BORRACHA 17 UN' },
+    { codigo: '4710', nome: 'PREGO PIETRO 17X27 1KG' },
+    { codigo: '42', nome: 'DISCO TACOGRAFO 125 7DIAS' },
+    { codigo: '1875', nome: 'DISCO TACOGRAFO 125 DIARIO' },
+    { codigo: '663', nome: 'DISCO TACOGRAFO 180 24HORAS' },
+    { codigo: '1165', nome: 'DISCO TACOGRAFO 180 7DIAS' },
+    { codigo: '1286', nome: 'PALHETA 14' },
+    { codigo: '1369', nome: 'PALHETA 15' },
+    { codigo: '1299', nome: 'PALHETA 16' },
+    { codigo: '1274', nome: 'PALHETA 17' },
+    { codigo: '1306', nome: 'PALHETA 18' },
+    { codigo: '1313', nome: 'PALHETA 19' },
+    { codigo: '1319', nome: 'PALHETA 20' },
+    { codigo: '1326', nome: 'PALHETA 21' },
+    { codigo: '1332', nome: 'PALHETA 22' },
+    { codigo: '1339', nome: 'PALHETA 23' },
+    { codigo: '1346', nome: 'PALHETA 24' },
+    { codigo: '1353', nome: 'PALHETA 26' },
+    { codigo: '3645', nome: 'PALHETA BOSCH AF 16' },
+    { codigo: '3644', nome: 'PALHETA BOSCH AF 18' },
+    { codigo: '3642', nome: 'PALHETA BOSCH AF 19' },
+    { codigo: '5860', nome: 'PALHETA TRASEIRA 10' },
+    { codigo: '5861', nome: 'PALHETA TRASEIRA 12' },
+    { codigo: '5862', nome: 'PALHETA TRASEIRA 13' },
+    { codigo: '5863', nome: 'PALHETA TRASEIRA 14' },
+    { codigo: '5864', nome: 'PALHETA TRASEIRA 15' },
+    { codigo: '5865', nome: 'PALHETA TRASEIRA 16' },
+    { codigo: '5883', nome: 'PALHETA TRASEIRA 18' },
+    { codigo: '3445', nome: 'ADITIVO ANTICORROSIVO W-MAX WURTH' },
+    { codigo: '62', nome: 'ADITIVO BARDAHL B12 PLUS 500ML' },
+    { codigo: '22', nome: 'ADITIVO BARDAHL B12 TURBO 1L' },
+    { codigo: '57', nome: 'ADITIVO BARDAHL CLEAN GAS 200ML' },
+    { codigo: '997', nome: 'ADITIVO BARDAHL FLEX' },
+    { codigo: '59', nome: 'ADITIVO BARDAHL MAX DIESEL 200ML' },
+    { codigo: '5950', nome: 'ADITIVO BARDAHL MAX POWER 200ML' },
+    { codigo: '5898', nome: 'ADITIVO BARDAHL MAX S10 500ML' },
+    { codigo: '63', nome: 'ADITIVO BARDAHL PROLONGA 500ML' },
+    { codigo: '5', nome: 'ADITIVO BLACK PRIME' },
+    { codigo: '587', nome: 'ADITIVO RADIADOR WURT TRATAMENTO' },
+    { codigo: '1281', nome: 'LIMPA ESTOFADOS 400ML' },
+    { codigo: '3904', nome: 'PROMAX CONDICIONADOR DE METAIS 200ML' },
+    { codigo: '67', nome: 'SELANTE RADIADOR 100ML' },
+    { codigo: '66', nome: 'SOLUCAO BATERIA (ACIDO)' },
+    { codigo: '605', nome: 'EXTINTOR 1KG 5 ANOS (CARRO)' },
+    { codigo: '79', nome: 'FILTRO  OW 460' },
+    { codigo: '3751', nome: 'FILTRO AKX 4007 CABINE VOLVO' },
+    { codigo: '96', nome: 'FILTRO EFA 302' },
+    { codigo: '91', nome: 'FILTRO EFA 327' },
+    { codigo: '107', nome: 'FILTRO EFA 513 OU FAP 4049' },
+    { codigo: '94', nome: 'FILTRO EFA 519 OU FAP 2827' },
+    { codigo: '589', nome: 'FILTRO EFA 619' },
+    { codigo: '2171', nome: 'FILTRO EFA 623' },
+    { codigo: '117', nome: 'FILTRO EFA 907' },
+    { codigo: '76', nome: 'FILTRO EFA 908' },
+    { codigo: '115', nome: 'FILTRO EFA 918 OU FAP 3262' },
+    { codigo: '140', nome: 'FILTRO EFA 920 OU FAP 3268' },
+    { codigo: '161', nome: 'FILTRO EFA 937 OU FAP 9003' },
+    { codigo: '674', nome: 'FILTRO EFA 938' },
+    { codigo: '123', nome: 'FILTRO EFA 940 OU FAP 3287' },
+    { codigo: '2269', nome: 'FILTRO EFA 944 OU ARS 9838' },
+    { codigo: '626', nome: 'FILTRO EFA 946 OU WAP 103' },
+    { codigo: '591', nome: 'FILTRO EFA 965 OU FAP 2214' },
+    { codigo: '1598', nome: 'FILTRO EFA 967' },
+    { codigo: '1391', nome: 'FILTRO EFA 991' },
+    { codigo: '110', nome: 'FILTRO EFL 028' },
+    { codigo: '1881', nome: 'FILTRO EFL 189/ WO 180' },
+    { codigo: '86', nome: 'FILTRO EFL 343' },
+    { codigo: '83', nome: 'FILTRO EFL 425' },
+    { codigo: '3113', nome: 'FILTRO EFL 523 OU WO 610' },
+    { codigo: '1373', nome: 'FILTRO EFL 562 OU WO 370' },
+    { codigo: '1620', nome: 'FILTRO EFL 715' },
+    { codigo: '114', nome: 'FILTRO EFL 721 OU OFL 012 B' },
+    { codigo: '1386', nome: 'FILTRO EFL 734 OU WO 120' },
+    { codigo: '74', nome: 'FILTRO EFL 735 OU WO 200' },
+    { codigo: '135', nome: 'FILTRO EFL 736 OU WO-205' },
+    { codigo: '618', nome: 'FILTRO EFL 745 OU WO 612' },
+    { codigo: '619', nome: 'FILTRO EFL 746 MULTI 015' },
+    { codigo: '90', nome: 'FILTRO EFL 747/619  MULTI 013' },
+    { codigo: '125', nome: 'FILTRO EFL 748 MULTI 014' },
+    { codigo: '48', nome: 'FILTRO EFL 749 MULTI 012' },
+    { codigo: '108', nome: 'FILTRO EFL 750 MULTI 011' },
+    { codigo: '87', nome: 'FILTRO EFL 861' },
+    { codigo: '116', nome: 'FILTRO EFL 986' },
+    { codigo: '122', nome: 'FILTRO EFS 102 OU FCD 2056' },
+    { codigo: '3923', nome: 'FILTRO FAP 2219 AR GOL G6' },
+    { codigo: '3850', nome: 'FILTRO FAP 2829' },
+    { codigo: '3068', nome: 'FILTRO FAP 3233' },
+    { codigo: '728', nome: 'FILTRO FAP 3261' },
+    { codigo: '3762', nome: 'FILTRO FAP 4043 AR TOYOTA ETIOS' },
+    { codigo: '3180', nome: 'FILTRO FAP 4054' },
+    { codigo: '628', nome: 'FILTRO FAP 4871' },
+    { codigo: '679', nome: 'FILTRO FAP 4872/1' },
+    { codigo: '3181', nome: 'FILTRO FAP 4873' },
+    { codigo: '3340', nome: 'FILTRO FAP 4877' },
+    { codigo: '670', nome: 'FILTRO FAP 7007' },
+    { codigo: '2919', nome: 'FILTRO FAP 7013 AR SENTRA' },
+    { codigo: '710', nome: 'FILTRO FAP 9002 OU EFA 932 RANGER' },
+    { codigo: '2657', nome: 'FILTRO FAP 9004' },
+    { codigo: '1069', nome: 'FILTRO FAP 9054 AR NOVO UNO' },
+    { codigo: '2821', nome: 'FILTRO FAP 9121 AR DOBLO 2010' },
+    { codigo: '625', nome: 'FILTRO FAP 9273' },
+    { codigo: '3464', nome: 'FILTRO FAP 9296' },
+    { codigo: '5776', nome: 'FILTRO FCD - 0962' },
+    { codigo: '5944', nome: 'FILTRO FCD 0720/1 MERCEDES' },
+    { codigo: '2909', nome: 'FILTRO FCD 0777 OU HDF 768' },
+    { codigo: '1938', nome: 'FILTRO FCD 0785' },
+    { codigo: '4088', nome: 'FILTRO FCD 0803' },
+    { codigo: '5945', nome: 'FILTRO FCD 0956 DAF' },
+    { codigo: '3937', nome: 'FILTRO FCD 2184 SPRINTER 415' },
+    { codigo: '5947', nome: 'FILTRO FCD 2203 MERCEDES' },
+    { codigo: '5943', nome: 'FILTRO FCD 2206 VOLVO FH' },
+    { codigo: '3753', nome: 'FILTRO FCD 2207 COMBUSTIVEL' },
+    { codigo: '4176', nome: 'FILTRO FCD 30123' },
+    { codigo: '2354', nome: 'FILTRO FCD 30124' },
+    { codigo: '101', nome: 'FILTRO FCD 796 OU HDF796' },
+    { codigo: '100', nome: 'FILTRO HDF 296' },
+    { codigo: '2251', nome: 'FILTRO HDF 411' },
+    { codigo: '102', nome: 'FILTRO HDF 501A PAR' },
+    { codigo: '658', nome: 'FILTRO HDF 529' },
+    { codigo: '2231', nome: 'FILTRO HDF 820' },
+    { codigo: '5189', nome: 'FILTRO JFA 0282' },
+    { codigo: '5963', nome: 'FILTRO JFA 0285' },
+    { codigo: '647', nome: 'FILTRO JFA 283' },
+    { codigo: '648', nome: 'FILTRO JFA 285' },
+    { codigo: '1321', nome: 'FILTRO JFA 428/1' },
+    { codigo: '3327', nome: 'FILTRO JFA 428/3 AR HONDA FIT 2009' },
+    { codigo: '1417', nome: 'FILTRO JFA 438' },
+    { codigo: '4180', nome: 'FILTRO JFO 0505P' },
+    { codigo: '1460', nome: 'FILTRO JFO 0H00 HB20 1,0' },
+    { codigo: '1471', nome: 'FILTRO JFO 0H01 HB20 1,6' },
+    { codigo: '632', nome: 'FILTRO JFO 210' },
+    { codigo: '631', nome: 'FILTRO JFO 210/1' },
+    { codigo: '3809', nome: 'FILTRO JFO 598 IX 35' },
+    { codigo: '2927', nome: 'FILTRO OFC 1542 S' },
+    { codigo: '5857', nome: 'FILTRO TB339I' },
+    { codigo: '5778', nome: 'FILTRO TR 37480' },
+    { codigo: '5820', nome: 'FILTRO TURBO TB350I' },
+    { codigo: '5777', nome: 'FILTRO WEGA FCD - 400' },
+    { codigo: '5935', nome: 'FILTRO WM001' },
+    { codigo: '5934', nome: 'FILTRO WM002' },
+    { codigo: '5936', nome: 'FILTRO WM003' },
+    { codigo: '5937', nome: 'FILTRO WM004' },
+    { codigo: '5938', nome: 'FILTRO WM005' },
+    { codigo: '3605', nome: 'FILTRO WO 121' },
+    { codigo: '1693', nome: 'FILTRO WO 131' },
+    { codigo: '3046', nome: 'FILTRO WO 133' },
+    { codigo: '3171', nome: 'FILTRO WO 136 LUBRIF CAPTIVA' },
+    { codigo: '3184', nome: 'FILTRO WO 153 NEW FIESTA' },
+    { codigo: '3886', nome: 'FILTRO WO 156 FUSION' },
+    { codigo: '3545', nome: 'FILTRO WO 160 OU PH5566' },
+    { codigo: '3182', nome: 'FILTRO WO 346 UP 1,0' },
+    { codigo: '3931', nome: 'FILTRO WO 412' },
+    { codigo: '2230', nome: 'FILTRO WO 421' },
+    { codigo: '3371', nome: 'FILTRO WO 541' },
+    { codigo: '3527', nome: 'FILTRO WO 625 JEEP CHEROKEE' },
+    { codigo: '627', nome: 'FILTRO WOE 121' },
+    { codigo: '1936', nome: 'FILTRO WOE 131' },
+    { codigo: '1448', nome: 'FILTRO WOE 300/1' },
+    { codigo: '729', nome: 'FILTRO WOE 313 CRUZE' },
+    { codigo: '1547', nome: 'FILTRO WOE 314 S10 OU EFL 785' },
+    { codigo: '624', nome: 'FILTRO WOE 410 CLASSE A' },
+    { codigo: '657', nome: 'FILTRO WOE 500 CLIO' },
+    { codigo: '3765', nome: 'FILTRO WOE 626' },
+    { codigo: '2923', nome: 'FILTRO WOE 680' },
+    { codigo: '5955', nome: 'FILTRO WOE 680' },
+    { codigo: '672', nome: 'FILTRO WOE 700' },
+    { codigo: '655', nome: 'FILTRO WOE 710' },
+    { codigo: '2235', nome: 'FILTRO WOE 803 COROLLA' },
+    { codigo: '700', nome: 'FILTRO WOE 912 LINEA IDEA PUNTO' },
+    { codigo: '4137', nome: 'FILTRO WOE 913 HYUNDAI SANTA FE' },
+    { codigo: '5946', nome: 'WOE 821 DAF' },
+    { codigo: '39', nome: 'FLUIDO FREIO DOT 3 200 ML' },
+    { codigo: '40', nome: 'FLUIDO FREIO DOT 3 500 ML' },
+    { codigo: '2443', nome: 'FLUIDO FREIO DOT 4 200 ML' },
+    { codigo: '58', nome: 'FLUIDO FREIO DOT 4 500 ML' },
+    { codigo: '5788', nome: 'GRAXA BLUTER AZUL 10KG' },
+    { codigo: '4946', nome: 'GRAXA BLUTER AZUL 1KG' },
+    { codigo: '3225', nome: 'GRAXA CHASSIS JOCLE 500G' },
+    { codigo: '4422', nome: 'GRAXA EVORA CHASSIS GI2 1KG' },
+    { codigo: '5807', nome: 'GRAXA INGRAX CA2 CH2 CHASSIS 18KG' },
+    { codigo: '35', nome: 'GRAXA LITHOLINE' },
+    { codigo: '36', nome: 'GRAXA LITHOLINE BD' },
+    { codigo: '44', nome: 'GRAXA Q.A CHASSIS 10 KG' },
+    { codigo: '1381', nome: 'GRAXA UNI BLUE 1 KG ROLAMENTO' },
+    { codigo: '1388', nome: 'GRAXA UNI BLUE 10 KG ROLAMENTO' },
+    { codigo: '2041', nome: 'GRAXA UNI CA2 10KG' },
+    { codigo: '1394', nome: 'GRAXA UNIGRAX 1 KG CHASSIS' },
+    { codigo: '2755', nome: 'ANTI TABACO 400ML' },
+    { codigo: '4586', nome: 'AROMAT NATUAR AREA 51 ALIEN 45ML' },
+    { codigo: '2480', nome: 'AROMATIZANTE AIR TRUCK 500ML' },
+    { codigo: '1200', nome: 'AROMATIZANTE AMAZONIA CUPUACU 7G' },
+    { codigo: '1553', nome: 'AROMATIZANTE AMAZONIA MURUMURU 7G' },
+    { codigo: '1559', nome: 'AROMATIZANTE AMAZONIA VANILA 7G' },
+    { codigo: '4146', nome: 'AROMATIZANTE AREA 51 ALIEN' },
+    { codigo: '69', nome: 'AROMATIZANTE AUTO FRESH WURT' },
+    { codigo: '5577', nome: 'AROMATIZANTE BLACK PRIME FOLHA' },
+    { codigo: '3425', nome: 'AROMATIZANTE CAR SOCCER GREMIO' },
+    { codigo: '4276', nome: 'AROMATIZANTE CUIA  4,5ML' },
+    { codigo: '1650', nome: 'AROMATIZANTE ESTACOES FLOWERS' },
+    { codigo: '1647', nome: 'AROMATIZANTE ESTACOES LAVANDA' },
+    { codigo: '1654', nome: 'AROMATIZANTE ESTACOES OCEANO' },
+    { codigo: '726', nome: 'AROMATIZANTE ESTACOES SUMMER' },
+    { codigo: '722', nome: 'AROMATIZANTE GLADE GEL' },
+    { codigo: '3475', nome: 'AROMATIZANTE HIPER ESSENCE' },
+    { codigo: '3429', nome: 'AROMATIZANTE NATUAR AMERICA 45M' },
+    { codigo: '1442', nome: 'AROMATIZANTE NATUAR CARRO NOVO 60ML' },
+    { codigo: '1431', nome: 'AROMATIZANTE NATUAR ERVAS FINAS 60ML' },
+    { codigo: '3356', nome: 'AROMATIZANTE NATUAR GAUCHO 45M' },
+    { codigo: '3979', nome: 'AROMATIZANTE NATUAR GERMANY 45M' },
+    { codigo: '3980', nome: 'AROMATIZANTE NATUAR ITALY 45M' },
+    { codigo: '1721', nome: 'AROMATIZANTE NATUAR LAVANDA 60ML' },
+    { codigo: '4148', nome: 'AROMATIZANTE NATUAR LIZ PRENDA' },
+    { codigo: '3428', nome: 'AROMATIZANTE NATUAR LONDON 45M' },
+    { codigo: '72', nome: 'AROMATIZANTE NATUAR MARINE 60ML' },
+    { codigo: '3402', nome: 'AROMATIZANTE NATUAR MAX AMERICA' },
+    { codigo: '5327', nome: 'AROMATIZANTE NATUAR MAX GAUCHO' },
+    { codigo: '3811', nome: 'AROMATIZANTE NATUAR MAX GERMANY' },
+    { codigo: '3969', nome: 'AROMATIZANTE NATUAR MAX ITALY' },
+    { codigo: '4408', nome: 'AROMATIZANTE NATUAR MAX LONDON' },
+    { codigo: '3401', nome: 'AROMATIZANTE NATUAR MAX VINTAGE' },
+    { codigo: '1651', nome: 'AROMATIZANTE NATUAR MORANGO 60ML' },
+    { codigo: '5593', nome: 'AROMATIZANTE NATUAR PIN-UP VINTAGE 45M' },
+    { codigo: '3358', nome: 'AROMATIZANTE NATUAR RETRO 45M' },
+    { codigo: '3431', nome: 'AROMATIZANTE NATUAR TIO SAM' },
+    { codigo: '1648', nome: 'AROMATIZANTE NATUAR TUTTI FRUTTI 60ML' },
+    { codigo: '5197', nome: 'AROMATIZANTE NATUAR VANILLA' },
+    { codigo: '3357', nome: 'AROMATIZANTE NATUAR VINTAGE 45M' },
+    { codigo: '2845', nome: 'AROMATIZANTE POWER PISTAO' },
+    { codigo: '5839', nome: 'AROMATIZANTE SPAIN' },
+    { codigo: '611', nome: 'AROMATIZANTE SPRING' },
+    { codigo: '128', nome: 'CERA CENTRALSUL 200G' },
+    { codigo: '780', nome: 'CERA EXPRESSA CENTRALSUL' },
+    { codigo: '3533', nome: 'CERA FLEX CAR 500ML' },
+    { codigo: '68', nome: 'CERA GRAND PRIX 200G' },
+    { codigo: '5825', nome: 'DESENGRAXANTE EXPRESS POWER 500ML' },
+    { codigo: '41', nome: 'DESENGRIPANTE SUPER LUB' },
+    { codigo: '50', nome: 'DESTAQUE 245ML' },
+    { codigo: '4174', nome: 'DESTAQUE CS SPRAY ALIEN  400ML' },
+    { codigo: '3333', nome: 'DESTAQUE CS SPRAY AMERICA 400ML' },
+    { codigo: '1432', nome: 'DESTAQUE CS SPRAY GERMANY 400ML' },
+    { codigo: '1425', nome: 'DESTAQUE CS SPRAY ITALY 400ML' },
+    { codigo: '599', nome: 'DESTAQUE CS SPRAY LAVANDA 400ML' },
+    { codigo: '3332', nome: 'DESTAQUE CS SPRAY LONDON 400ML' },
+    { codigo: '3243', nome: 'DESTAQUE CS SPRAY RETRO 400ML' },
+    { codigo: '5840', nome: 'DESTAQUE CS SPRAY SPAIN 400ML' },
+    { codigo: '1415', nome: 'DESTAQUE CS SPRAY V8 400ML' },
+    { codigo: '3242', nome: 'DESTAQUE CS SPRAY VINTAGE 400ML' },
+    { codigo: '739', nome: 'DESTAQUE GEL BISNAGA' },
+    { codigo: '53', nome: 'ESTOPA POLIMENTO' },
+    { codigo: '3221', nome: 'HIDRATANTE PARA COURO 400ML' },
+    { codigo: '3902', nome: 'LAVA CARROS COM CERA 1LT' },
+    { codigo: '1590', nome: 'LIMPA PARABRISA WURT 100 ML' },
+    { codigo: '5848', nome: 'LIMPA PARABRISA WURT 30ML' },
+    { codigo: '5211', nome: 'LIMPADOR DE FREIOS E PECAS' },
+    { codigo: '1609', nome: 'MAXXI VISAO SPRAY ANTIEMBACANTE 60ML' },
+    { codigo: '1894', nome: 'OURO PRETO 500ML' },
+    { codigo: '3864', nome: 'REVITALIZADOR DE PAINEL' },
+    { codigo: '4687', nome: 'SERVICO TROCA DE OLEO' },
+    { codigo: '4686', nome: 'TROCA DE OLEO CORTESIA' },
+    { codigo: '4820', nome: 'WATER OFF WURTH 100ML' },
+    { codigo: '1341', nome: 'WATER OFF WURTH 30ML' },
+    { codigo: '828', nome: 'ARLA 20 LTS' },
+    { codigo: '5565', nome: 'ARLA 5LT' },
+    { codigo: '1218', nome: 'BD RIMULA RT4X  BD 15W40' },
+    { codigo: '1224', nome: 'BD SPIRAX ATF' },
+    { codigo: '4462', nome: 'BRUTUS  PERFORMANCE 15W40 CI4 BD 20LT' },
+    { codigo: '5779', nome: 'BRUTUS  PERFORMANCE LIGHT CI 15W40 BB 20LT' },
+    { codigo: '18', nome: 'BRUTUS 15W40 AP BD' },
+    { codigo: '3520', nome: 'BRUTUS 15W40 T5 4LT' },
+    { codigo: '20', nome: 'BRUTUS 15W40 T5 5LT' },
+    { codigo: '1575', nome: 'BRUTUS 15W40 T5 BD' },
+    { codigo: '19', nome: 'BRUTUS 15W40 T5 LT' },
+    { codigo: '17', nome: 'BRUTUS PROT SAE 30 BLD' },
+    { codigo: '15', nome: 'BRUTUS SAE 20W40 1LT' },
+    { codigo: '16', nome: 'BRUTUS SAE 40 5LT' },
+    { codigo: '4419', nome: 'CASTROL 2T 200ML' },
+    { codigo: '1969', nome: 'CASTROL 2T 500ML' },
+    { codigo: '5866', nome: 'COMBO HAVOLINE 15W40' },
+    { codigo: '615', nome: 'F1 MASTER PERF 10W30 SEMI LT' },
+    { codigo: '3059', nome: 'F1 MASTER PERF 10W40 SEMI LT' },
+    { codigo: '616', nome: 'F1 MASTER PERF 15W40 SEMI LT' },
+    { codigo: '11', nome: 'F1 MASTER PROT 20W40 500ML' },
+    { codigo: '10', nome: 'F1 MASTER PROT 20W40 GL 4LT' },
+    { codigo: '7', nome: 'F1 MASTER PROT 20W50 200LT' },
+    { codigo: '8', nome: 'F1 MASTER PROT 20W50 SL 1LT' },
+    { codigo: '9', nome: 'F1 MASTER PROT 20W50 SL 500 ML' },
+    { codigo: '56', nome: 'F1 MASTER SINT 10W40 LT' },
+    { codigo: '727', nome: 'F1 MASTER SINT 5W40 LT' },
+    { codigo: '5667', nome: 'F1 MASTER SINTETICO 0W20 1LT' },
+    { codigo: '5668', nome: 'F1 MASTER SINTETICO 0W30 1LT' },
+    { codigo: '31', nome: 'FLUIDO AT 500ML' },
+    { codigo: '33', nome: 'FLUIDO AT BLD' },
+    { codigo: '32', nome: 'FLUIDO AT LT' },
+    { codigo: '3536', nome: 'FLUIDO ATF 200ML' },
+    { codigo: '1362', nome: 'GL WBF 100' },
+    { codigo: '1983', nome: 'HAVOLINE 5W30 DEXOS 1LT' },
+    { codigo: '4383', nome: 'HAVOLINE SEMI SINTETICO 10W30  1LT' },
+    { codigo: '1944', nome: 'HAVOLINE SEMI SINTETICO 15W401LT' },
+    { codigo: '1941', nome: 'HAVOLINE SUPERIOR 20W50  1LT' },
+    { codigo: '3888', nome: 'HEXLUB 15W40 MAXX PERFOMANCE 1LT' },
+    { codigo: '14', nome: 'IPIRANGA 2T 200ML' },
+    { codigo: '13', nome: 'IPIRANGA 2T 500ML' },
+    { codigo: '12', nome: 'IPIRANGA 2T LT' },
+    { codigo: '5826', nome: 'IPIRANGA ULTRAGEAR GL-5 140  1L' },
+    { codigo: '5780', nome: 'IPIRANGA ULTRAGEAR GL-5 85W140 BB 20KG' },
+    { codigo: '5827', nome: 'IPIRANGA ULTRAGEAR GL-5 90  1L' },
+    { codigo: '583', nome: 'IPIRGEROL OU ULTRAGEAR GL4 140 LT' },
+    { codigo: '24', nome: 'IPIRGEROL OU ULTRAGEAR GL4 90LT' },
+    { codigo: '5832', nome: 'KARTER 5W40 SINTETICO 1 LT' },
+    { codigo: '5578', nome: 'KARTER GEAR IPI GL 5-140 20 LTS' },
+    { codigo: '5201', nome: 'KARTER GEAR OIL SK GL 5-90 20LT' },
+    { codigo: '5440', nome: 'LT UNI FORMULA TECH 15W40 SEMI' },
+    { codigo: '4128', nome: 'LUBRAX  2T LT' },
+    { codigo: '2775', nome: 'LUBRAX  ESSENCIAL 20W50 SL 1LT' },
+    { codigo: '3928', nome: 'LUBRAX  VALORA OFFROAD 5W30 SINT DPF3LT' },
+    { codigo: '2368', nome: 'LUBRAX 2T 200 ML' },
+    { codigo: '2386', nome: 'LUBRAX 2T 500ML' },
+    { codigo: '2392', nome: 'LUBRAX ATF TA 1L' },
+    { codigo: '2387', nome: 'LUBRAX ATF TA 500ML' },
+    { codigo: '2609', nome: 'LUBRAX DT 30 500ML' },
+    { codigo: '2435', nome: 'LUBRAX EX. TURBO 15W40 3LT' },
+    { codigo: '1917', nome: 'LUBRAX EXTRA TURBO 20LT' },
+    { codigo: '5421', nome: 'LUBRAX TECNO 15W40 SN SEMISSINT 1LT' },
+    { codigo: '5426', nome: 'LUBRAX VALORA 5W-30 SINTETICO 1LT' },
+    { codigo: '3757', nome: 'LUBRAX VALORA OFFROAD 5W30 SINT DPF 1LT' },
+    { codigo: '3764', nome: 'LUBRAX VALORA SINTETICO 0W-20 1LT' },
+    { codigo: '26', nome: 'MARINA 2T PLUS 500ML' },
+    { codigo: '692', nome: 'MAXON  68 1LT' },
+    { codigo: '1691', nome: 'MAXON  68 20LT' },
+    { codigo: '3542', nome: 'MAXON 4T 20W50 1LT' },
+    { codigo: '3228', nome: 'MAXON OIL GEAR EP 140 GL4 20LT' },
+    { codigo: '2767', nome: 'MAXON OIL GEAR EP 90 GL4 20LT' },
+    { codigo: '620', nome: 'MAXON OIL GL4 140  1LT' },
+    { codigo: '584', nome: 'MAXON OIL GL4 140 5LT' },
+    { codigo: '621', nome: 'MAXON OIL GL4 90 1LT' },
+    { codigo: '52', nome: 'MAXON OIL GL4 90 5LT' },
+    { codigo: '6025', nome: 'MAXON OLEO ATF 500ML DEXRON III' },
+    { codigo: '3487', nome: 'MAXON RHING TRUCK 15W40  20LT' },
+    { codigo: '47', nome: 'MOBIL 2T 500ML' },
+    { codigo: '5948', nome: 'MOBIL 5W20 SINTÉTICO' },
+    { codigo: '46', nome: 'MOBIL MOTO 4T LT' },
+    { codigo: '651', nome: 'MOTO IPIRANGA 4T 10W30 LT' },
+    { codigo: '54', nome: 'MOTO IPIRANGA 4T 20W50 LT' },
+    { codigo: '3291', nome: 'MOTOSSERA MAXON 1LT' },
+    { codigo: '34', nome: 'MOTOSSERA MAXON 5LT' },
+    { codigo: '49', nome: 'MOTOSSERA ULTRON LT' },
+    { codigo: '3496', nome: 'MULTIFLEX OU HEXLUB SL 20W50 1LT' },
+    { codigo: '5490', nome: 'MULTIFLEX OU INCOL SL 20W50 1LT' },
+    { codigo: '3506', nome: 'OLEO PARA COMPRESSOR DXLUB 1L' },
+    { codigo: '5971', nome: 'PETREONAS URANIA K 10W40 SINTÉTICO 20 LTS' },
+    { codigo: '64', nome: 'QUEROSENE 900ML' },
+    { codigo: '1927', nome: 'TEXAMATIC ATF 1LT' },
+    { codigo: '3808', nome: 'TOTAL QUARTZ 7000 SEM SN 15W40  1LT' },
+    { codigo: '1960', nome: 'UNIX CORRENTE MOTOSSERRA  1LT' },
+    { codigo: '4683', nome: 'UNIX CORRENTE MOTOSSERRA 4LT' },
+    { codigo: '1915', nome: 'URSA PREMIUM TDX 15W40 BD 20LT' },
+    { codigo: '1909', nome: 'URSA SUPER TD 15W40 20LT' },
+    { codigo: '4463', nome: 'VIRTUS OU AXIS HIDRAULICO 68 BLD 20LT' }
+]);
+
+let itensConsumo = loadDataFromLocalStorage('itensConsumoData', [
+    { codigo: '10', nome: 'TOALHA MAGICA PARA LAVAGEM' },
+    { codigo: '11', nome: 'AGUA SANITARIA 5LTS' },
+    { codigo: '12', nome: 'SACO DE LIXO DE 200 LTS' },
+    { codigo: '13', nome: 'SACO DE LIXO DE 100 LTS' },
+    { codigo: '14', nome: 'SACO DE LIXO DE 60 LTS' },
+    { codigo: '15', nome: 'PAPEL HIGIENICO ROLÃO 500 MTS' },
+    { codigo: '16', nome: 'PAPEL HIGIENICO ROLÃO 300 MTS' },
+    { codigo: '17', nome: 'PAPEL TOALHA INTERF. FARDO C/ 500 FOLHA' },
+    { codigo: '18', nome: 'RODO LIMPA PARABRISAS' },
+    { codigo: '19', nome: 'RODO ALUMINIO GRANDE PARA PISTA' },
+    { codigo: '20', nome: 'LIMPADOR PEROXIDO 5 LTS CONCENTRADO' },
+    { codigo: '21', nome: 'ELIMINADOR DE ODORES 3 LTS CONCENTRADO' },
+    { codigo: '22', nome: 'BORRIFADOR 500ML' },
+    { codigo: '23', nome: 'PANO MICROFIBRA 35X35' },
+    { codigo: '23', nome: 'PA C/ CABO LIXO' }, 
+    { codigo: '24', nome: 'PAPEL TOALHA DE BOBINA' },
+    { codigo: '25', nome: 'PEDRA SANITARIA EUCALIPTO' },
+    { codigo: '26', nome: 'SHAMPO ROVER METACIL 20 LTS' },
+    { codigo: '27', nome: 'SHAMPO ROVER DESENGRAXANTE 20 LTS' },
+    { codigo: '28', nome: 'SHAMPOO ROVER NEUTRO 20LTS' },
+    { codigo: '29', nome: 'SHAMPOO SUPRA METACIL 20 LTS' },
+    { codigo: '30', nome: 'SHAMPOO SUPRA DESENGRAXANTE 20 LTS' }, 
+    { codigo: '31', nome: 'SHAMPOO SUPRA NEUTRO 20 LTS' },
+    { codigo: '32', nome: 'COPO PLASTICO' },
+    { codigo: '33', nome: 'CONDIMENTOS' },
+    { codigo: '34', nome: 'LUVAS M' }, 
+    { codigo: '34', nome: 'REFIL BRUXA' }, 
+    { codigo: '36', nome: 'COALA LIMPEZA 200ML' },
+    { codigo: '37', nome: 'COPO PACOTE' },
+    { codigo: '38', nome: 'VASSOURA PALHA' },
+    { codigo: '39', nome: 'DESINFETANTE 5LTS' },
+    { codigo: '40', nome: 'DETERGENTE 5 LTS' },
+    { codigo: '42', nome: 'SABONETE LIQ. 5 LTS' },
+    { codigo: '44', nome: 'PEDRA SANITARIA EUCALIPTO' }, 
+    { codigo: '45', nome: 'BALDE MOP' },
+    { codigo: '46', nome: 'REGADOR 10 L' },
+    { codigo: '47', nome: 'NEUTRALIZADOR DE ODORES 5LTS' },
+    { codigo: '48', nome: 'ESTOPAS' },
+    { codigo: '49', nome: 'SACOLA GRANDE' },
+    { codigo: '50', nome: 'ESCOVÃO PARA BRISAS' },
+    { codigo: '51', nome: 'BALDE MOPI' },
+    { codigo: '52', nome: 'LUVAS TROCA DE ÓLEO' },
+    { codigo: '53', nome: 'DETERGENTE COLORADO' },
+    { codigo: '54', nome: 'VASSOURA ESCOVÃO PISTA' },
+    { codigo: '55', nome: 'DISPENSER PAPEL TOALHA' },
+    { codigo: '56', nome: 'REGADOR 10LTS PISTA' }
+]);
+
+// ===================================================================================
+// VARIÁVEIS GLOBAIS DE CONTROLE
+// ===================================================================================
+let selectedSector = '';
+let selectedUnit = '';
+const SENHA_ADMIN = "0019"; 
+let isAdminLogged = false;
+
+let currentManagingListKey = '';
+let currentManagingListDisplayName = '';
+
+// ===================================================================================
+// LÓGICA DE ADMINISTRAÇÃO DE PRODUTOS
+// ===================================================================================
+function showAdminLoginPrompt() {
+    hideAllSections();
+    document.getElementById('adminSection').style.display = 'block';
+    if (isAdminLogged) {
+        document.getElementById('adminLoginDiv').style.display = 'none';
+        document.getElementById('adminDashboard').style.display = 'block';
+        document.getElementById('listManagementSection').style.display = 'none';
+        document.getElementById('adminToolsDiv').style.display = 'none'; // Esconde as ferramentas ao reabrir
+    } else {
+        document.getElementById('adminLoginDiv').style.display = 'block';
+        document.getElementById('adminDashboard').style.display = 'none';
+        document.getElementById('listManagementSection').style.display = 'none';
+        document.getElementById('adminToolsDiv').style.display = 'none';
+        document.getElementById('adminPasswordInput').value = '';
+        document.getElementById('adminPasswordInput').focus();
+    }
+}
+
+function checkAdminPassword() {
+    const passwordInput = document.getElementById('adminPasswordInput').value;
+    if (passwordInput === SENHA_ADMIN) {
+        isAdminLogged = true;
+        document.getElementById('adminLoginDiv').style.display = 'none';
+        document.getElementById('adminDashboard').style.display = 'block';
+    } else {
+        alert("Senha incorreta!");
+        document.getElementById('adminPasswordInput').value = '';
+        document.getElementById('adminPasswordInput').focus();
+    }
+}
+
+function logoutAdmin() {
+    isAdminLogged = false;
+    document.getElementById('adminPasswordInput').value = '';
+    document.getElementById('adminToolsDiv').style.display = 'none';
+    showMenu(); 
+}
+
+function showAdminTools() {
+    const adminToolsDiv = document.getElementById('adminToolsDiv');
+    adminToolsDiv.style.display = adminToolsDiv.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveLocalStorageToFile() {
+    const dataToSave = {
+        produtosConvenienciaData: produtosConveniencia,
+        produtosLubrificantesData: produtosLubrificantes,
+        itensConsumoData: itensConsumo
+    };
+
+    const jsonData = JSON.stringify(dataToSave, null, 2);
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const today = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `pedidos_central_backup_${today}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert('Backup salvo com sucesso!');
+}
+
+function triggerImportLocalStorage() {
+    document.getElementById('importFile').click();
+}
+
+function importLocalStorageFromFile(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            let dataReloaded = false; 
+
+            if (importedData.produtosConvenienciaData && Array.isArray(importedData.produtosConvenienciaData)) {
+                produtosConveniencia = importedData.produtosConvenienciaData;
+                saveDataToLocalStorage('produtosConvenienciaData', produtosConveniencia);
+                dataReloaded = true;
+            }
+            if (importedData.produtosLubrificantesData && Array.isArray(importedData.produtosLubrificantesData)) {
+                produtosLubrificantes = importedData.produtosLubrificantesData;
+                saveDataToLocalStorage('produtosLubrificantesData', produtosLubrificantes);
+                dataReloaded = true;
+            }
+            if (importedData.itensConsumoData && Array.isArray(importedData.itensConsumoData)) {
+                itensConsumo = importedData.itensConsumoData;
+                saveDataToLocalStorage('itensConsumoData', itensConsumo);
+                dataReloaded = true;
+            }
+
+            if (dataReloaded) {
+                updateAllDatalists();
+                if (document.getElementById('listManagementSection').style.display === 'block' && currentManagingListKey) {
+                    renderItemsTable(); 
+                }
+                alert('Dados importados com sucesso! As listas de produtos foram atualizadas.');
+            } else {
+                alert('Arquivo de backup inválido ou não contém dados esperados no formato correto (array).');
+            }
+        } catch (error) {
+            console.error("Erro ao importar dados:", error);
+            alert('Erro ao processar o arquivo de backup. Verifique o console para mais detalhes.');
+        } finally {
+            event.target.value = null; 
+        }
+    };
+    reader.readAsText(file);
+}
+
+
+function hideAllSections() {
+    const sections = document.querySelectorAll('.initial-choice, .unit-selection-container, .form-section');
+    sections.forEach(section => section.style.display = 'none');
+}
+
+function manageList(listDisplayName, listKey) {
+    currentManagingListDisplayName = listDisplayName;
+    currentManagingListKey = listKey;
+
+    document.getElementById('listManagementTitle').textContent = `Gerenciar ${listDisplayName}`;
+    document.getElementById('listManagementSection').style.display = 'block';
+    document.getElementById('adminToolsDiv').style.display = 'none'; 
+    clearItemForm();
+    renderItemsTable();
+}
+
+function getCurrentListRef() {
+    if (currentManagingListKey === 'produtosConveniencia') return produtosConveniencia;
+    if (currentManagingListKey === 'produtosLubrificantes') return produtosLubrificantes;
+    if (currentManagingListKey === 'itensConsumo') return itensConsumo;
+    return null;
+}
+
+function renderItemsTable() {
+    const tableBody = document.getElementById('itemsTableBody');
+    tableBody.innerHTML = '';
+    let currentList = getCurrentListRef();
+    if (!currentList) return;
+
+    currentList.sort((a, b) => String(a.codigo).localeCompare(String(b.codigo), undefined, {numeric: true}));
+
+    currentList.forEach(item => {
+        const row = tableBody.insertRow();
+        row.insertCell().textContent = item.codigo;
+        row.insertCell().textContent = item.nome;
+        const actionsCell = row.insertCell();
+        actionsCell.classList.add('no-print');
+        actionsCell.innerHTML = `
+            <button onclick="editItem('${item.codigo}')" style="margin-right:5px; font-size:0.9em; padding: 5px 8px;">Editar</button>
+            <button class="btn-remove" onclick="deleteItem('${item.codigo}')" style="font-size:0.9em; padding: 5px 8px;">Excluir</button>
+        `;
+    });
+}
+
+function clearItemForm() {
+    document.getElementById('itemCodigo').value = '';
+    document.getElementById('itemNome').value = '';
+    document.getElementById('editItemOriginalCodigo').value = '';
+    document.getElementById('itemCodigo').disabled = false;
+    document.getElementById('btnSaveItem').textContent = 'Adicionar Item';
+}
+
+function saveItem() {
+    const codigoInput = document.getElementById('itemCodigo');
+    const nomeInput = document.getElementById('itemNome');
+    const originalCodigo = document.getElementById('editItemOriginalCodigo').value;
+
+    const codigo = codigoInput.value.trim();
+    const nome = nomeInput.value.trim();
+
+    if (!codigo || !nome) {
+        alert('Código e Nome são obrigatórios.');
+        return;
+    }
+
+    let currentList = getCurrentListRef();
+    if (!currentList) return;
+
+    const isEditing = originalCodigo !== '';
+    
+    const codigoExists = currentList.some(
+        item => item.codigo === codigo && (!isEditing || item.codigo !== originalCodigo)
+    );
+
+    if (!isEditing && codigoExists) { 
+        alert('Este código de item já existe nesta lista. Por favor, use um código diferente.');
+        return;
+    }
+
+    if (isEditing) {
+        if (codigo !== originalCodigo && currentList.some(item => item.codigo === codigo)) {
+            alert('O novo código informado já existe nesta lista. Por favor, use um código diferente.');
+            return;
+        }
+        const itemIndex = currentList.findIndex(item => item.codigo === originalCodigo);
+        if (itemIndex > -1) {
+            currentList[itemIndex] = { codigo, nome };
+        }
+    } else {
+        currentList.push({ codigo, nome });
+    }
+
+    currentList.sort((a, b) => String(a.codigo).localeCompare(String(b.codigo), undefined, {numeric: true}));
+
+    if (currentManagingListKey === 'produtosConveniencia') produtosConveniencia = [...currentList];
+    else if (currentManagingListKey === 'produtosLubrificantes') produtosLubrificantes = [...currentList];
+    else if (currentManagingListKey === 'itensConsumo') itensConsumo = [...currentList];
+
+    saveDataToLocalStorage(currentManagingListKey + 'Data', currentList);
+    renderItemsTable();
+    clearItemForm();
+    updateAllDatalists();
+}
+
+function editItem(codigo) {
+    const currentList = getCurrentListRef();
+    if (!currentList) return;
+    const item = currentList.find(i => i.codigo === codigo);
+    if (item) {
+        document.getElementById('itemCodigo').value = item.codigo;
+        document.getElementById('itemNome').value = item.nome;
+        document.getElementById('editItemOriginalCodigo').value = item.codigo;
+        document.getElementById('btnSaveItem').textContent = 'Salvar Alterações';
+        document.getElementById('itemNome').focus();
+    }
+}
+
+function deleteItem(codigo) {
+    let currentList = getCurrentListRef();
+    if (!currentList) return;
+
+    const itemToDelete = currentList.find(i => i.codigo === codigo);
+    if (!itemToDelete) return;
+
+    if (confirm(`Tem certeza que deseja excluir o item "${itemToDelete.codigo} - ${itemToDelete.nome}"?`)) {
+        currentList = currentList.filter(item => item.codigo !== codigo);
+
+        if (currentManagingListKey === 'produtosConveniencia') produtosConveniencia = [...currentList];
+        else if (currentManagingListKey === 'produtosLubrificantes') produtosLubrificantes = [...currentList];
+        else if (currentManagingListKey === 'itensConsumo') itensConsumo = [...currentList];
+        
+        saveDataToLocalStorage(currentManagingListKey + 'Data', currentList);
+        renderItemsTable();
+        clearItemForm(); 
+        updateAllDatalists();
+    }
+}
+
+function updateAllDatalists() {
+    popularDatalist('listaProdutosConveniencia', produtosConveniencia);
+    popularDatalist('listaProdutosLubrificantes', produtosLubrificantes);
+    popularDatalist('listaItensConsumo', itensConsumo);
+}
+
+// ===================================================================================
+// LÓGICA DO SISTEMA DE PEDIDOS
+// ===================================================================================
+function initializeSystem() {
+    updateAllDatalists();
+    showMenu();
+}
+
+function popularDatalist(datalistId, dataArray) {
+    const datalist = document.getElementById(datalistId);
+    if (!datalist) {
+        console.error("Datalist não encontrado:", datalistId);
+        return;
+    }
+    datalist.innerHTML = '';
+    if (!Array.isArray(dataArray)) {
+         console.warn("DataArray não é um array para", datalistId, dataArray);
+        return; 
+    }
+    const sortedArray = [...dataArray].sort((a, b) => String(a.codigo).localeCompare(String(b.codigo), undefined, {numeric: true}));
+
+    sortedArray.forEach(item => {
+        const option = document.createElement('option');
+        option.value = `${item.codigo} - ${item.nome}`;
+        datalist.appendChild(option);
+    });
+}
+
+function selectSector(sector) {
+    selectedSector = sector;
+    hideAllSections();
+    document.getElementById('inicio').style.display = 'none';
+    document.getElementById('unitSelection').style.display = 'block';
+}
+
+function proceedToForm() {
+    const unitSelect = document.getElementById('unitSelect');
+    if (!unitSelect.value) {
+        alert('Por favor, selecione uma unidade para continuar.');
+        return;
+    }
+    selectedUnit = unitSelect.value;
+    
+    hideAllSections();
+    
+    const formId = `form${selectedSector}`;
+    document.getElementById(formId).style.display = 'block';
+
+    const unitDisplayId = `unitDisplay${selectedSector}`;
+    document.getElementById(unitDisplayId).textContent = `Relatório da ${selectedUnit}`;
+}
+
+function showMenu() {
+    isAdminLogged = false; 
+    hideAllSections();
+    document.getElementById('inicio').style.display = 'block';
+    
+    if(document.getElementById('tabelaPedidoConveniencia')) document.getElementById('tabelaPedidoConveniencia').innerHTML = '';
+    if(document.getElementById('tabelaPedidoLubrificantes')) document.getElementById('tabelaPedidoLubrificantes').innerHTML = '';
+    
+    const buscaInputs = ['buscaProdutoConveniencia', 'qtdProdutoConveniencia', 'buscaConsumoConveniencia', 'qtdConsumoConveniencia', 'buscaProdutoLubrificantes', 'qtdProdutoLubrificantes', 'buscaConsumoLubrificantes', 'qtdConsumoLubrificantes'];
+    buscaInputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.value = '';
+    });
+
+    const unitSelect = document.getElementById('unitSelect');
+    if (unitSelect) unitSelect.value = '';
+    
+    selectedSector = '';
+    selectedUnit = '';
+}
+
+function adicionarItem(tipoPedido, tipoItem) {
+    const isConveniencia = tipoPedido === 'conveniencia';
+    const isProduto = tipoItem === 'produto';
+    const sectorCapitalized = isConveniencia ? 'Conveniencia' : 'Lubrificantes';
+
+    const buscaInputId = isProduto ? `buscaProduto${sectorCapitalized}` : `buscaConsumo${sectorCapitalized}`;
+    const qtdInputId = isProduto ? `qtdProduto${sectorCapitalized}` : `qtdConsumo${sectorCapitalized}`;
+    const tabelaId = `tabelaPedido${sectorCapitalized}`;
+    
+    const buscaInput = document.getElementById(buscaInputId);
+    const qtdInput = document.getElementById(qtdInputId);
+    const tabelaBody = document.getElementById(tabelaId);
+
+    const produtoValor = buscaInput.value.trim();
+    const quantidade = qtdInput.value.trim();
+
+    if (!produtoValor || !quantidade || parseInt(quantidade) <= 0) {
+        alert('Erro: Todos os campos (Produto e Quantidade) são obrigatórios e a quantidade deve ser maior que zero.');
+        return;
+    }
+    
+    const partes = produtoValor.split(' - ');
+    const codigo = partes[0];
+    
+    let listaDeOrigem;
+    if (isProduto) {
+        listaDeOrigem = isConveniencia ? produtosConveniencia : produtosLubrificantes;
+    } else {
+        listaDeOrigem = itensConsumo;
+    }
+    const itemEncontrado = listaDeOrigem.find(item => item.codigo === codigo);
+
+    if (!itemEncontrado) {
+         alert(`Erro: Código de produto/item "${codigo}" não encontrado na base de dados. Verifique o código ou cadastre o item na seção de administração.`);
+        buscaInput.value = ''; // Limpa o input para nova tentativa
+        buscaInput.focus();
+        return;
+    }
+    const nomeCorreto = itemEncontrado.nome;
+
+
+    const rows = tabelaBody.getElementsByTagName('tr');
+    for (let i = 0; i < rows.length; i++) {
+        if (rows[i].cells[0].textContent === codigo) {
+            alert('Este item já foi adicionado ao pedido. Você pode remover e adicionar novamente com a quantidade correta.');
+            return;
+        }
+    }
+
+    const newRow = tabelaBody.insertRow();
+    newRow.innerHTML = `
+        <td>${codigo}</td>
+        <td>${nomeCorreto}</td>
+        <td>${quantidade}</td>
+        <td class="no-print"><button class="btn-remove" onclick="removerItem(this)">Remover</button></td>
+    `;
+
+    buscaInput.value = '';
+    qtdInput.value = '';
+    buscaInput.focus();
+}
+
+function removerItem(button) {
+    const row = button.closest('tr');
+    if (row) {
+        row.parentNode.removeChild(row);
+    }
+}
+
+function enviarEmail(tipoPedido) {
+    const isConveniencia = tipoPedido === 'conveniencia';
+    const emailDestino = isConveniencia ? 'compras.loja@postoscentral.com.br' : 'compras.lubri@postoscentral.com.br';
+    const sectorCapitalized = isConveniencia ? 'Conveniencia' : 'Lubrificantes';
+    const tabelaId = `tabelaPedido${sectorCapitalized}`;
+    const tabelaBody = document.getElementById(tabelaId);
+    
+    if (!tabelaBody || tabelaBody.rows.length === 0) {
+        alert('Não há itens no pedido para concluir.');
+        return;
+    }
+
+    const printableAreaId = `printable${sectorCapitalized}`;
+    const elementToPrint = document.getElementById(printableAreaId);
+    if (!elementToPrint) {
+        alert('Área para impressão não encontrada.');
+        return;
+    }
+
+    const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+    const nomeArquivo = `Pedido_${sectorCapitalized}_${selectedUnit.replace(/[\s:]+/g, '_')}_${dataAtual}.pdf`;
+
+    const adminButtonContainer = document.querySelector('.admin-button-container');
+    const adminSectionEl = document.getElementById('adminSection');
+    const allOtherFormSections = Array.from(document.querySelectorAll('.form-section')).filter(form => form.id !== `form${sectorCapitalized}`);
+    const initialChoiceSection = document.getElementById('inicio');
+    const unitSelectionSection = document.getElementById('unitSelection');
+    const pageTitleElement = document.querySelector('body > .container > h1.no-print');
+    const footerCreditElement = document.querySelector('body > p.no-print');
+
+    const originalDisplays = new Map();
+    const elementsToHideTemporarily = [
+        adminButtonContainer, adminSectionEl, initialChoiceSection, unitSelectionSection, pageTitleElement, footerCreditElement,
+        ...allOtherFormSections
+    ];
+
+    elementsToHideTemporarily.forEach(el => {
+        if (el) {
+            originalDisplays.set(el, el.style.display);
+            el.style.display = 'none';
+        }
+    });
+    document.getElementById(`form${sectorCapitalized}`).style.display = 'block';
+
+    document.body.classList.add('pdf-export-mode');
+    
+    // Assegura que os títulos sejam exibidos para o PDF, mesmo que .pdf-export-mode já os defina
+    // Isso é uma garantia extra e pode não ser estritamente necessário se o CSS estiver correto.
+    const h2Title = elementToPrint.querySelector('h2');
+    const unitHeader = elementToPrint.querySelector('.report-unit-header');
+    const h3Items = elementToPrint.querySelector('h3'); 
+    if(h2Title) h2Title.style.display = 'block';
+    if(unitHeader) unitHeader.style.display = 'block';
+    if(h3Items) h3Items.style.display = 'block';
+
+    function restoreOriginalDisplays() {
+        document.body.classList.remove('pdf-export-mode');
+        originalDisplays.forEach((displayValue, element) => {
+            if (element) element.style.display = displayValue;
+        });
+        document.getElementById(`form${sectorCapitalized}`).style.display = 'block'; 
+        if (footerCreditElement) footerCreditElement.style.display = 'block';
+    }
+
+    html2canvas(elementToPrint, { 
+        scale: 2.0, // Reduzido de 2.5 para tentar diminuir o tamanho do arquivo
+        useCORS: true,
+        backgroundColor: '#ffffff', // Importante para JPEG, que não suporta transparência
+        logging: false, 
+        onclone: (documentClone) => {
+            // No clone, garantir que elementos .no-print dentro da área de impressão sejam escondidos
+            documentClone.querySelectorAll(`#${printableAreaId} .no-print`).forEach(el => el.style.display = 'none');
+            
+            // Garantir que os títulos H2, H3 e o cabeçalho da unidade sejam visíveis no clone
+            const clonedPrintableArea = documentClone.getElementById(printableAreaId);
+            if (clonedPrintableArea) {
+                const h2Clone = clonedPrintableArea.querySelector('h2');
+                const unitHeaderClone = clonedPrintableArea.querySelector('.report-unit-header');
+                const h3ItensClone = clonedPrintableArea.querySelector('h3'); 
+                if (h2Clone) h2Clone.style.display = 'block';
+                if (unitHeaderClone) unitHeaderClone.style.display = 'block';
+                if (h3ItensClone) h3ItensClone.style.display = 'block';
+            }
+        }
+    }).then(canvas => {
+        // MUDANÇA: Converter para JPEG com qualidade ajustável (0.0 a 1.0)
+        // Um valor como 0.8 é um bom começo. Pode reduzir para 0.7 se precisar de mais compressão.
+        const imgData = canvas.toDataURL('image/jpeg', 0.8); 
+        
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const pageMargin = 10; 
+        
+        const imgProps = pdf.getImageProperties(imgData);
+        const imgWidth = imgProps.width;
+        const imgHeight = imgProps.height;
+        const ratio = imgWidth / imgHeight;
+        
+        let pdfImgWidth = pdfWidth - 2 * pageMargin;
+        let pdfImgHeight = pdfImgWidth / ratio;
+
+        if (pdfImgHeight > (pdfHeight - 2 * pageMargin)) {
+            pdfImgHeight = pdfHeight - 2 * pageMargin;
+            pdfImgWidth = pdfImgHeight * ratio;   
+        }
+        
+        const xPosition = (pdfWidth - pdfImgWidth) / 2; 
+        const yPosition = pageMargin;                   
+
+        // MUDANÇA: Especificar 'JPEG' ao adicionar a imagem
+        pdf.addImage(imgData, 'JPEG', xPosition, yPosition, pdfImgWidth, pdfImgHeight);
+        pdf.save(nomeArquivo);
+
+        restoreOriginalDisplays();
+        alert(`O PDF "${nomeArquivo}" foi gerado e baixado.\n\nPor favor, anexe-o manualmente ao e-mail para ${emailDestino}.`);
+    
+    }).catch(err => {
+        console.error("Erro ao gerar PDF:", err);
+        alert("Ocorreu um erro ao gerar o PDF. Verifique o console para detalhes.");
+        restoreOriginalDisplays();
+    });
+}
+
+
+window.onload = initializeSystem;
+</script>
+
+</body>
+</html>
